@@ -59,9 +59,6 @@ namespace Hypertable {
     int64_t m_received_ts;
   };
 
-
-  typedef intrusive_ptr<OperationRegisterServer> OperationRegisterServerPtr;
-
 } // namespace Hypertable
 
 #endif // HYPERTABLE_OPERATIONREGISTERSERVER_H

@@ -39,16 +39,16 @@
 
 namespace Hypertable {
 
+  /** @addtogroup Master
+   *  @{
+   */
+
   /** Callback class for range server lock files.
    * An object of this class is registered with each range server lock file in
-   * hyperspace and is used to detect when a range server disconnects or
-   * reconnects.
-   * 
-   * RangeServerHyperspaceCallback is a Hyperspace handle callback
-   * that is installed to handle a LOCK RELEASED event on a RangeServers
-   * Hyperspace file.  It sets up a timer to add an OperationRecover
-   * operation after Hypertable.Failover.GracePeriod milliseconds have
-   * elapsed.
+   * Hyperspace and is used to handle the disconnect and reconnect of a range
+   * server.  It specifically takes measures to ensure that a range server
+   * does not get re-registered until it has received a <i>lock released</i>
+   * event for the server from Hyperspace.
    */
   class RangeServerHyperspaceCallback : public Hyperspace::HandleCallback {
   public:
@@ -65,17 +65,24 @@ namespace Hypertable {
       m_context(context), m_rsc(rsc) { }
 
     /** Responds to lock release event.
-     * 
+     * This method performs the following actions:
+     *   1. Removes the server from list of available servers with a call to
+     *      Context::remove_available_server()
+     *   2. If the server is connected, it advances the recovery barrier
+     *      (<code>m_context->recovery_barrier_op</code> to
+     *      <code>Hypertable.Failover.GracePeriod</code> milliseconds in the
+     *      future and then creates an OperationRecover for the server and
+     *      adds it to the OperationProcessor.
+     *   3. Unblocks operations with obstruction label "<server-name> register"
+     *      to allow any pending register server operation for this server to
+     *      proceed.
      */
     virtual void lock_released() {
-
+      HT_INFOF("%s hyperspace lock file released", m_rsc->location().c_str());
       m_context->remove_available_server(m_rsc->location());
-
       if (m_rsc->connected()) {
-
         uint32_t millis = m_context->props->get_i32("Hypertable.Failover.GracePeriod");
         m_context->recovery_barrier_op->advance_into_future(millis);
-
         OperationPtr operation = new OperationRecover(m_context, m_rsc);
         try {
           m_context->op->add_operation(operation);
@@ -84,8 +91,7 @@ namespace Hypertable {
           HT_INFOF("%s - %s", Error::get_text(e.code()), e.what());
         }
       }
-
-      m_context->op->unblock(m_rsc->location() + " register");
+      m_context->op->unblock(String("RegisterServerBlocker ") + m_rsc->location());
     }
 
     /** Responds to lock acquired event.
@@ -96,8 +102,10 @@ namespace Hypertable {
      * is delivered for #1.  It handles this by creating an
      * OperationRegisterServerBlocker for the server which prevents it from
      * executing until the <i>lock released</i> event is received.
+     * @param mode the mode in which the lock was acquired
      */
-    virtual void lock_acquired() {
+    virtual void lock_acquired(uint32_t mode) {
+      HT_INFOF("%s hyperspace lock file acquired", m_rsc->location().c_str());
       OperationPtr op =
         new OperationRegisterServerBlocker(m_context, m_rsc->location());
       try {
@@ -117,6 +125,7 @@ namespace Hypertable {
     RangeServerConnectionPtr m_rsc;
   };
 
+  /** @} */
 }
 
 #endif // HYPERTABLE_RANGESERVERHYPERSPACECALLBACK_H

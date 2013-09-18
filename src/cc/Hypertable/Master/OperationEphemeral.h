@@ -49,7 +49,7 @@ namespace Hypertable {
    *  @{
    */
 
-  /** Abstract base class for ephemeral master operations.
+  /** Abstract base class for ephemeral operations.
    * This class is used as the base class for operations that do not persist
    * themselves to the MML.  It provides implementations for the encoding and
    * decoding operations which simply assert to assure that they're not called.
@@ -96,7 +96,7 @@ namespace Hypertable {
     virtual ~OperationEphemeral() { }
 
     /** Encoded length of operation state.
-     * This method unconditionally asserts because it should not be called by
+     * @note This method unconditionally asserts because it should not be called by
      * ephemeral operations.
      */
     virtual size_t encoded_state_length() const {
@@ -104,7 +104,7 @@ namespace Hypertable {
     }
 
     /** Encode operation state.
-     * This method unconditionally asserts because it should not be called by
+     * @note This method unconditionally asserts because it should not be called by
      * ephemeral operations.
      */
     virtual void encode_state(uint8_t **bufp) const {
@@ -112,7 +112,7 @@ namespace Hypertable {
     }
 
     /** Decode operation state.
-     * This method unconditionally asserts because it should not be called by
+     * @note This method unconditionally asserts because it should not be called by
      * ephemeral operations.
      */
     virtual void decode_state(const uint8_t **bufp, size_t *remainp) {
@@ -120,7 +120,7 @@ namespace Hypertable {
     }
 
     /** Returns version of encoding format.
-     * This method unconditionally asserts because it should not be called by
+     * @note This method unconditionally asserts because it should not be called by
      * ephemeral operations.
      */
     virtual uint16_t encoding_version() const {
@@ -128,7 +128,7 @@ namespace Hypertable {
     }
 
     /** Length of encoded operation.
-     * This method unconditionally asserts because it should not be called by
+     * @note This method unconditionally asserts because it should not be called by
      * ephemeral operations.
      */
     virtual size_t encoded_length() const {
@@ -136,7 +136,7 @@ namespace Hypertable {
     }
 
     /** Encode operation.
-     * This method unconditionally asserts because it should not be called by
+     * @note This method unconditionally asserts because it should not be called by
      * ephemeral operations.
      */
     virtual void encode(uint8_t **bufp) const {
@@ -144,7 +144,7 @@ namespace Hypertable {
     }
 
     /** Decode operation.
-     * This method unconditionally asserts because it should not be called by
+     * @note This method unconditionally asserts because it should not be called by
      * ephemeral operations.
      */
     virtual void decode(const uint8_t **bufp, size_t *remainp,
@@ -153,9 +153,6 @@ namespace Hypertable {
     }
 
   };
-
-  /** Smart pointer to OperationEphemeral */
-  typedef intrusive_ptr<OperationEphemeral> OperationEphemeralPtr;
 
   /** @} */
 

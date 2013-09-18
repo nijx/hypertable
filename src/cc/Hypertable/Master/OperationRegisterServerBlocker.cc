@@ -40,14 +40,14 @@ OperationRegisterServerBlocker::OperationRegisterServerBlocker(ContextPtr &conte
                                                                const String &location)
   : OperationEphemeral(context, MetaLog::EntityType::OPERATION_REGISTER_SERVER_BLOCKER),
     m_location(location) {
-  m_obstructions.insert(m_location + " register");
+  m_obstructions.insert(String("RegisterServerBlocker ") + m_location);
 }
 
 void OperationRegisterServerBlocker::execute() {
   int32_t state = get_state();
 
-  HT_INFOF("Entering RegisterServerBlocker-%lld state=%s", (Lld)header.id,
-           OperationState::get_text(state));
+  HT_INFOF("Entering RegisterServerBlocker-%lld %s state=%s", (Lld)header.id,
+           m_location.c_str(), OperationState::get_text(state));
 
   switch (state) {
 
@@ -64,8 +64,8 @@ void OperationRegisterServerBlocker::execute() {
     HT_FATALF("Unrecognized state %d", state);
   }
 
-  HT_INFOF("Leaving RegisterServerBlocker-%lld state=%s", (Lld)header.id,
-           OperationState::get_text(get_state()));
+  HT_INFOF("Leaving RegisterServerBlocker-%lld %s state=%s", (Lld)header.id,
+           m_location.c_str(), OperationState::get_text(get_state()));
 }
 
 const String OperationRegisterServerBlocker::name() {

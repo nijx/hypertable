@@ -43,7 +43,6 @@ namespace Hypertable {
     virtual bool is_perpetual() { return true; }
 
     virtual void display_state(std::ostream &os) { }
-    virtual void decode_request(const uint8_t **bufp, size_t *remainp) { }
 
     void advance_into_future(uint32_t millis);
     void shutdown();
@@ -55,7 +54,6 @@ namespace Hypertable {
     String m_wakeup_dependency;
     bool m_shutdown;
   };
-  typedef intrusive_ptr<OperationTimedBarrier> OperationTimedBarrierPtr;
 
 } // namespace Hypertable
 

@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -46,8 +46,6 @@ namespace Hypertable {
     TableIdentifierManaged m_table;
     RangeSpecManaged m_range;
   };
-
-  typedef intrusive_ptr<OperationRelinquishAcknowledge> OperationRelinquishAcknowledgePtr;
 
 } // namespace Hypertable
 

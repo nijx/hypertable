@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -36,10 +36,7 @@ namespace Hypertable {
     virtual const String name();
     virtual const String label();
     virtual void display_state(std::ostream &os) { }
-    virtual void decode_request(const uint8_t **bufp, size_t *remainp) { }
   };
-
-  typedef intrusive_ptr<OperationStatus> OperationStatusPtr;
 
 } // namespace Hypertable
 

@@ -48,8 +48,10 @@ OperationRegisterServer::OperationRegisterServer(ContextPtr &context,
   size_t remaining = event->payload_len;
   decode_request(&ptr, &remaining);
 
-  if (!m_location.empty())
-    add_dependency(m_location + " register");
+  if (!m_location.empty()) {
+    add_obstruction(String("RegisterServer ") + m_location);
+    add_dependency(String("RegisterServerBlocker ") + m_location);
+  }
 
   m_local_addr = InetAddr(event->addr);
   m_public_addr = InetAddr(m_system_stats.net_info.primary_addr, m_listen_port);

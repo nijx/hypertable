@@ -33,12 +33,6 @@ OperationRecoveryBlocker::OperationRecoveryBlocker(ContextPtr &context)
   m_obstructions.insert(Dependency::RECOVERY_BLOCKER);
 }
 
-OperationRecoveryBlocker::OperationRecoveryBlocker(ContextPtr &context,
-        const MetaLog::EntityHeader &header_)
-    : OperationEphemeral(context, header_) {
-  HT_ASSERT(!"Invalid OperationRecoveryBlocker constructor called");
-}
-
 void OperationRecoveryBlocker::execute() {
 
   HT_INFOF("Entering RecoveryBlocker-%lld", (Lld)header.id);
@@ -78,7 +72,7 @@ void OperationRecoveryBlocker::execute() {
     m_context->quorum_reached = true;
   }
 
-  complete_ok();
+  set_state(OperationState::COMPLETE);
 
   HT_INFOF("Leaving RecoveryBlocker-%lld state=%s", (Lld)header.id,
            OperationState::get_text(get_state()));

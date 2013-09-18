@@ -53,6 +53,7 @@ OperationRecover::OperationRecover(ContextPtr &context,
     m_restart(flags==RESTART),
     m_lock_acquired(false) {
   m_subop_dependency = format("operation-id-%lld", (Lld)id());
+  m_dependencies.insert(String("RegisterServer ") + m_location);
   m_dependencies.insert(m_subop_dependency);
   m_dependencies.insert(Dependency::RECOVERY_BLOCKER);
   m_dependencies.insert(Dependency::RECOVERY);

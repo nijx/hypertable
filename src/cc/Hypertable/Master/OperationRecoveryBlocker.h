@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -29,19 +29,14 @@ namespace Hypertable {
   class OperationRecoveryBlocker : public OperationEphemeral {
   public:
     OperationRecoveryBlocker(ContextPtr &context);
-    OperationRecoveryBlocker(ContextPtr &context, 
-                             const MetaLog::EntityHeader &header_);
     virtual ~OperationRecoveryBlocker() { }
 
     virtual void execute();
     virtual const String name();
     virtual const String label();
     virtual bool is_perpetual() { return true; }
-
     virtual void display_state(std::ostream &os) { }
-    virtual void decode_request(const uint8_t **bufp, size_t *remainp) { }
   };
-  typedef intrusive_ptr<OperationRecoveryBlocker> OperationRecoveryBlockerPtr;
 
 } // namespace Hypertable
 

@@ -43,8 +43,6 @@ namespace Hypertable {
     bool m_recover;
   };
 
-  typedef intrusive_ptr<OperationStop> OperationStopPtr;
-
 } // namespace Hypertable
 
 #endif // HYPERTABLE_OPERATIONSTOP_H

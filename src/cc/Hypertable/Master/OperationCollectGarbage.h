@@ -35,11 +35,8 @@ namespace Hypertable {
     virtual const String name();
     virtual const String label();
     virtual bool exclusive() { return true; }
-
     virtual void display_state(std::ostream &os) { }
-    virtual void decode_request(const uint8_t **bufp, size_t *remainp) { }
   };
-  typedef intrusive_ptr<OperationCollectGarbage> OperationCollectGarbagePtr;
 
 } // namespace Hypertable
 

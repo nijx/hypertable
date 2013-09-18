@@ -229,17 +229,18 @@ namespace Hypertable {
     virtual bool exclusive() { return false; }
 
     /** Decodes initial operation state from Event payload.
-     * Operations can be created in response to request events sent to the
-     * master by clients.  This method is used to decode the initial operation
-     * state from an Event object created in response to a client request.
-     * This method should be called with <code>bufp</code> initialized to
-     * Event::payload and <code>remainp</code> initialized from
-     * Event::payload_len.  The payload contains initial operation state
-     * (request parameters) to be used to initialize the operation.
+     * Some operations can be created in response to request events sent to the
+     * master by clients.  For these types of operations, this method should be
+     * overridden to decode the initial operation state from the Event object
+     * created in response to a client request.  This method should be called
+     * with <code>bufp</code> initialized to Event::payload and
+     * <code>remainp</code> initialized from Event::payload_len.  The payload
+     * contains initial operation state (request parameters) to be used to
+     * initialize the operation.
      * @param bufp Address of buffer pointer (initialized to Event payload)
      * @param remainp Address of integer indicating how much buffer remains
      */
-    virtual void decode_request(const uint8_t **bufp, size_t *remainp) = 0;
+    virtual void decode_request(const uint8_t **bufp, size_t *remainp) { }
 
     /** Encoded length of operation state.
      * @return Length of encoded operation state.
