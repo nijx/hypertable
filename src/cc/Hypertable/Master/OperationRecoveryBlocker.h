@@ -22,15 +22,15 @@
 #ifndef HYPERTABLE_OPERATIONRECOVERYBLOCKER_H
 #define HYPERTABLE_OPERATIONRECOVERYBLOCKER_H
 
-#include "Operation.h"
+#include "OperationEphemeral.h"
 
 namespace Hypertable {
 
-  class OperationRecoveryBlocker : public Operation {
+  class OperationRecoveryBlocker : public OperationEphemeral {
   public:
     OperationRecoveryBlocker(ContextPtr &context);
     OperationRecoveryBlocker(ContextPtr &context, 
-            const MetaLog::EntityHeader &header_);
+                             const MetaLog::EntityHeader &header_);
     virtual ~OperationRecoveryBlocker() { }
 
     virtual void execute();
@@ -39,10 +39,6 @@ namespace Hypertable {
     virtual bool is_perpetual() { return true; }
 
     virtual void display_state(std::ostream &os) { }
-    virtual uint16_t encoding_version() const;
-    virtual size_t encoded_state_length() const { return 0; }
-    virtual void encode_state(uint8_t **bufp) const { }
-    virtual void decode_state(const uint8_t **bufp, size_t *remainp) { }
     virtual void decode_request(const uint8_t **bufp, size_t *remainp) { }
   };
   typedef intrusive_ptr<OperationRecoveryBlocker> OperationRecoveryBlockerPtr;

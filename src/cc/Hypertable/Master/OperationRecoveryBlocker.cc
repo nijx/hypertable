@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -29,13 +29,13 @@
 using namespace Hypertable;
 
 OperationRecoveryBlocker::OperationRecoveryBlocker(ContextPtr &context)
-  : Operation(context, MetaLog::EntityType::OPERATION_RECOVERY_BLOCKER) {
+  : OperationEphemeral(context, MetaLog::EntityType::OPERATION_RECOVERY_BLOCKER) {
   m_obstructions.insert(Dependency::RECOVERY_BLOCKER);
 }
 
 OperationRecoveryBlocker::OperationRecoveryBlocker(ContextPtr &context,
         const MetaLog::EntityHeader &header_)
-    : Operation(context, header_) {
+    : OperationEphemeral(context, header_) {
   HT_ASSERT(!"Invalid OperationRecoveryBlocker constructor called");
 }
 
@@ -78,16 +78,10 @@ void OperationRecoveryBlocker::execute() {
     m_context->quorum_reached = true;
   }
 
-  set_state(OperationState::COMPLETE);
+  complete_ok();
 
   HT_INFOF("Leaving RecoveryBlocker-%lld state=%s", (Lld)header.id,
            OperationState::get_text(get_state()));
-}
-
-#define OPERATION_RECOVERY_BLOCKER_VERSION 1
-
-uint16_t OperationRecoveryBlocker::encoding_version() const {
-  return OPERATION_RECOVERY_BLOCKER_VERSION;
 }
 
 const String OperationRecoveryBlocker::name() {

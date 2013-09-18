@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,28 +19,51 @@
  * 02110-1301, USA.
  */
 
-#ifndef HYPERTABLE_OPERATIONSTATUS_H
-#define HYPERTABLE_OPERATIONSTATUS_H
+/** @file
+ * Declarations for OperationRegisterServerBlocker.
+ * This file contains declarations for OperationRegisterServerBlocker, an
+ * Operation class for blocking server registration until a lock
+ * release notificaiton for the server's file has been delivered from
+ * Hyperspace.
+ */
+
+#ifndef HYPERTABLE_OPERATIONRECOVERYBLOCKER_H
+#define HYPERTABLE_OPERATIONRECOVERYBLOCKER_H
 
 #include "OperationEphemeral.h"
-#include "RangeServerConnection.h"
 
 namespace Hypertable {
 
-  class OperationStatus : public OperationEphemeral {
+  /** @addtogroup Master
+   *  @{
+   */
+
+  /** Blocks range server registration. */
+  class OperationRegisterServerBlocker : public OperationEphemeral {
   public:
-    OperationStatus(ContextPtr &context, EventPtr &event);
-    virtual ~OperationStatus() { }
+    
+    OperationRegisterServerBlocker(ContextPtr &context, const String &location);
+
+    /** Destructor. */
+    virtual ~OperationRegisterServerBlocker() { }
 
     virtual void execute();
     virtual const String name();
     virtual const String label();
+
     virtual void display_state(std::ostream &os) { }
     virtual void decode_request(const uint8_t **bufp, size_t *remainp) { }
+
+  private:
+    /// 
+    String m_location;
   };
 
-  typedef intrusive_ptr<OperationStatus> OperationStatusPtr;
+  /// Smart pointer to OperationRegisterServerBlocker
+  typedef intrusive_ptr<OperationRegisterServerBlocker> OperationRegisterServerBlockerPtr;
+
+  /** @} */
 
 } // namespace Hypertable
 
-#endif // HYPERTABLE_OPERATIONSTATUS_H
+#endif // HYPERTABLE_OPERATIONRECOVERYBLOCKER_H

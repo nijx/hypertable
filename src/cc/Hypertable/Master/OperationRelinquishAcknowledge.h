@@ -22,11 +22,11 @@
 #ifndef HYPERTABLE_OPERATIONRELINQUISHACKNOWLEDGE_H
 #define HYPERTABLE_OPERATIONRELINQUISHACKNOWLEDGE_H
 
-#include "Operation.h"
+#include "OperationEphemeral.h"
 
 namespace Hypertable {
 
-  class OperationRelinquishAcknowledge : public Operation {
+  class OperationRelinquishAcknowledge : public OperationEphemeral {
   public:
     OperationRelinquishAcknowledge(ContextPtr &context, EventPtr &event);
     OperationRelinquishAcknowledge(ContextPtr &context, const String &source,
@@ -39,10 +39,6 @@ namespace Hypertable {
     virtual const String graphviz_label();
 
     virtual void display_state(std::ostream &os);
-    virtual uint16_t encoding_version() const;
-    virtual size_t encoded_state_length() const;
-    virtual void encode_state(uint8_t **bufp) const;
-    virtual void decode_state(const uint8_t **bufp, size_t *remainp);
     virtual void decode_request(const uint8_t **bufp, size_t *remainp);
 
   private:

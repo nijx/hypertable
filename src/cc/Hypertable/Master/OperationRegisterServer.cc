@@ -43,10 +43,13 @@ using namespace Hypertable;
 
 OperationRegisterServer::OperationRegisterServer(ContextPtr &context,
                                                  EventPtr &event)
-  : Operation(context, event, MetaLog::EntityType::OPERATION_REGISTER_SERVER) {
+  : OperationEphemeral(context, event, MetaLog::EntityType::OPERATION_REGISTER_SERVER) {
   const uint8_t *ptr = event->payload;
   size_t remaining = event->payload_len;
   decode_request(&ptr, &remaining);
+
+  if (!m_location.empty())
+    add_dependency(m_location + " register");
 
   m_local_addr = InetAddr(event->addr);
   m_public_addr = InetAddr(m_system_stats.net_info.primary_addr, m_listen_port);
@@ -117,14 +120,16 @@ void OperationRegisterServer::execute() {
             m_system_stats.net_info.host_name.c_str(),
             m_public_addr.format().c_str(),
             m_location.c_str());
-    complete_error_no_log(Error::MASTER_RANGESERVER_IN_RECOVERY, errstr);
+    complete_error(Error::MASTER_RANGESERVER_IN_RECOVERY, errstr);
     HT_ERROR_OUT << errstr << HT_END;
 
     CommHeader header;
     header.initialize_from_request_header(m_event->header);
-    CommBufPtr cbp(new CommBuf(header, encoded_result_length()));
+    header.command = RangeServerProtocol::COMMAND_INITIALIZE;
+    m_context->system_state->get(specs, &generation);
+    CommBufPtr cbp(new CommBuf(header, encoded_response_length(generation, specs)));
+    encode_response(generation, specs, cbp->get_data_ptr_address());
 
-    encode_result(cbp->get_data_ptr_address());
     int error = m_context->comm->send_response(m_event->addr, cbp);
     if (error != Error::OK)
       HT_ERRORF("Problem sending response (location=%s) back to %s",
@@ -145,9 +150,8 @@ void OperationRegisterServer::execute() {
   if (!m_context->rsc_manager->connect_server(m_rsc, m_system_stats.net_info.host_name,
                                               m_local_addr, m_public_addr)) {
 
-    m_error = Error::CONNECT_ERROR_MASTER;
-    m_error_msg = format("Problem connecting location %s", m_location.c_str());
-
+    complete_error(Error::CONNECT_ERROR_MASTER,
+                   format("Problem connecting location %s",m_location.c_str()));
     CommHeader header;
     header.initialize_from_request_header(m_event->header);
     header.command = RangeServerProtocol::COMMAND_INITIALIZE;
@@ -158,7 +162,6 @@ void OperationRegisterServer::execute() {
     if (error != Error::OK)
       HT_ERRORF("Problem sending response (location=%s) back to %s",
                 m_location.c_str(), m_event->addr.format().c_str());
-    complete_error_no_log(m_error, m_error_msg);
     return;
   }
 
@@ -175,7 +178,7 @@ void OperationRegisterServer::execute() {
                             m_system_stats.net_info.host_name.c_str(),
                             m_location.c_str());
     m_context->notification_hook(subject, errstr);
-    complete_error_no_log(Error::RANGESERVER_CLOCK_SKEW, errstr);
+    complete_error(Error::RANGESERVER_CLOCK_SKEW, errstr);
     HT_ERROR_OUT << errstr << HT_END;
     // clock skew detected by master
     CommHeader header;
@@ -240,37 +243,12 @@ void OperationRegisterServer::execute() {
 
   m_context->add_available_server(m_location);
 
-  complete_ok_no_log();
+  complete_ok();
   m_context->op->unblock(m_location);
   m_context->op->unblock(Dependency::SERVERS);
   m_context->op->unblock(Dependency::RECOVERY_BLOCKER);
   HT_INFOF("%lld Leaving RegisterServer %s", 
           (Lld)header.id, m_rsc->location().c_str());
-}
-
-#define OPERATION_REGISTER_SERVER_VERSION 1
-
-uint16_t OperationRegisterServer::encoding_version() const {
-  return OPERATION_REGISTER_SERVER_VERSION;
-}
-
-size_t OperationRegisterServer::encoded_result_length() const {
-  size_t length = Operation::encoded_result_length();
-  if (m_error == Error::OK)
-    length += Serialization::encoded_length_vstr(m_location);
-  return length;
-}
-
-void OperationRegisterServer::encode_result(uint8_t **bufp) const {
-  Operation::encode_result(bufp);
-  if (m_error == Error::OK)
-    Serialization::encode_vstr(bufp, m_location);
-}
-
-void OperationRegisterServer::decode_result(const uint8_t **bufp, size_t *remainp) {
-  Operation::decode_result(bufp, remainp);
-  if (m_error == Error::OK)
-    m_location = Serialization::decode_vstr(bufp, remainp);
 }
 
 void OperationRegisterServer::display_state(std::ostream &os) {
