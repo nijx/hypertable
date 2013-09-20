@@ -68,14 +68,15 @@ namespace Hypertable {
 
     /** Responds to lock release event.
      * This method performs the following actions:
-     *   1. Removes the server from list of available servers with a call to
+     *   1. Sets #m_lock_held to <i>false</i> and signals #m_cond
+     *   2. Removes the server from list of available servers with a call to
      *      Context::remove_available_server()
-     *   2. If the server is connected, it advances the recovery barrier
+     *   3. If the server is connected, it advances the recovery barrier
      *      (<code>m_context->recovery_barrier_op</code> to
      *      <code>Hypertable.Failover.GracePeriod</code> milliseconds in the
      *      future and then creates an OperationRecover for the server and
      *      adds it to the OperationProcessor.
-     *   3. Unblocks operations with obstruction label "<server-name> register"
+     *   4. Unblocks operations with obstruction label "<server-name> register"
      *      to allow any pending register server operation for this server to
      *      proceed.
      */
@@ -103,12 +104,8 @@ namespace Hypertable {
 
     /** Responds to lock acquired event.
      * This method will be called when the range server identified by #m_rsc
-     * acquires the lock on its Hyperspace lock file.  It exists to avoid a race
-     * condition where a range server 1) dies and 2) restarts triggering a new
-     * register server operation, <b>before</b> the <i>lock released</i> event
-     * is delivered for #1.  It handles this by creating an
-     * OperationRegisterServerBlocker for the server which prevents it from
-     * executing until the <i>lock released</i> event is received.
+     * acquires the lock on its Hyperspace lock file.  It sets #m_lock_held to
+     * <i>true</i> and signals #m_cond.
      * @param mode the mode in which the lock was acquired
      */
     virtual void lock_acquired(uint32_t mode) {
@@ -118,6 +115,13 @@ namespace Hypertable {
       m_cond.notify_all();
     }
 
+    /** Waits for #m_lock_held to become <i>true</i>.
+     * This method waits on #m_cond until #m_lock_held becomes <i>true</i>.
+     * @param deadline Timeout if #m_lock_held does not become <i>true</i> by
+     *        this absolute time
+     * @return <i>false</i> if <code>deadline</code> reached before #m_lock_held
+     * becomes <i>true</i>, otherwise returns <i>true</i>
+     */
     bool wait_for_lock_acquisition(boost::xtime deadline) {
       ScopedLock lock(m_mutex);
       while (!m_lock_held) {

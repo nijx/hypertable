@@ -51,7 +51,7 @@ namespace Hypertable {
     /** Constructor.
      * Initializes object by passing parameters to parent constructor, setting
      * #m_location to <code>location</code>, and creating a single obstruction
-     * "<location> register".
+     * "RegisterServerBlocker <location>".
      * @param context %Master context
      * @param location Server proxy name
      */
