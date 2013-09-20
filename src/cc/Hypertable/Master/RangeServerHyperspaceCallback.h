@@ -28,6 +28,8 @@
 #ifndef HYPERTABLE_RANGESERVERHYPERSPACECALLBACK_H
 #define HYPERTABLE_RANGESERVERHYPERSPACECALLBACK_H
 
+#include "Common/Mutex.h"
+
 #include "Hyperspace/Session.h"
 
 #include "Context.h"
@@ -62,7 +64,7 @@ namespace Hypertable {
     RangeServerHyperspaceCallback(ContextPtr &context, RangeServerConnectionPtr &rsc)
       : Hyperspace::HandleCallback(Hyperspace::EVENT_MASK_LOCK_ACQUIRED|
                                    Hyperspace::EVENT_MASK_LOCK_RELEASED),
-      m_context(context), m_rsc(rsc) { }
+        m_context(context), m_rsc(rsc), m_lock_held(false) { }
 
     /** Responds to lock release event.
      * This method performs the following actions:
@@ -79,7 +81,12 @@ namespace Hypertable {
      */
     virtual void lock_released() {
       HT_INFOF("%s hyperspace lock file released", m_rsc->location().c_str());
-      m_context->remove_available_server(m_rsc->location());
+      {
+        ScopedLock lock(m_mutex);
+        m_lock_held = false;
+        m_context->remove_available_server(m_rsc->location());
+        m_cond.notify_all();
+      }
       if (m_rsc->connected()) {
         uint32_t millis = m_context->props->get_i32("Hypertable.Failover.GracePeriod");
         m_context->recovery_barrier_op->advance_into_future(millis);
@@ -105,24 +112,37 @@ namespace Hypertable {
      * @param mode the mode in which the lock was acquired
      */
     virtual void lock_acquired(uint32_t mode) {
+      ScopedLock lock(m_mutex);
       HT_INFOF("%s hyperspace lock file acquired", m_rsc->location().c_str());
-      OperationPtr op =
-        new OperationRegisterServerBlocker(m_context, m_rsc->location());
-      try {
-        m_context->op->add_operation(op);
+      m_lock_held = true;
+      m_cond.notify_all();
+    }
+
+    bool wait_for_lock_acquisition(boost::xtime deadline) {
+      ScopedLock lock(m_mutex);
+      while (!m_lock_held) {
+        if (!m_cond.timed_wait(lock, deadline))
+          return false;
       }
-      catch (Exception &e) {
-        HT_FATALF("%s - %s", Error::get_text(e.code()), e.what());
-      }
+      return true;
     }
 
   private:
+
+    /// %Mutex for serializing concurrent access
+    Mutex m_mutex;
+
+    /// Condition variable used to wait for completion
+    boost::condition m_cond;
 
     /// %Master context
     ContextPtr m_context;
 
     /// %Range server connection
     RangeServerConnectionPtr m_rsc;
+
+    /// Flag indicating if lock is currently held
+    bool m_lock_held;
   };
 
   /** @} */
