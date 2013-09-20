@@ -227,36 +227,40 @@ void OperationRegisterServer::execute() {
   }
 
   // Wait for server to acquire lock on Hyperspace file
-  boost::xtime deadline;
-  boost::xtime_get(&deadline, boost::TIME_UTC_);
-  deadline.sec += 120;
-  if (!hyperspace_callback->wait_for_lock_acquisition(deadline)) {
-    String notification_body = format("Timed out waiting for %s to acquire "
-                                      "lock on Hyperspace file",
-                                      m_location.c_str());
-    HT_WARNF("%s, sending shutdown request...", notification_body.c_str());
-    RangeServerClient rsclient(m_context->comm);
-    try {
-      rsclient.shutdown(m_event->addr);
-      m_context->rsc_manager->disconnect_server(m_rsc);
+  if (!m_lock_held) {
+    boost::xtime deadline;
+    boost::xtime_get(&deadline, boost::TIME_UTC_);
+    deadline.sec += 120;
+    if (!hyperspace_callback->wait_for_lock_acquisition(deadline)) {
+      String notification_body = format("Timed out waiting for %s to acquire "
+                                        "lock on Hyperspace file",
+                                        m_location.c_str());
+      HT_WARNF("%s, sending shutdown request...", notification_body.c_str());
+      RangeServerClient rsclient(m_context->comm);
+      try {
+        rsclient.shutdown(m_event->addr);
+        m_context->rsc_manager->disconnect_server(m_rsc);
 
-    }
-    catch (Exception &e) {
-      HT_ERROR_OUT << e << HT_END;
-      notification_body += format("\nProblem shutting down %s: %s - %s",
-                                  m_location.c_str(),
-                                  Error::get_text(e.code()), e.what());
-    }
-    String notification_subject =
-      format("Server registration error for %s (%s)", m_location.c_str(),
-             m_rsc->hostname().c_str());
-    m_context->notification_hook(notification_subject, notification_body);
-    OperationPtr operation = new OperationRecover(m_context, m_rsc);
-    try {
-      m_context->op->add_operation(operation);
-    }
-    catch (Exception &e) {
-      // Only exception thrown is Error::MASTER_OPERATION_IN_PROGRESS
+      }
+      catch (Exception &e) {
+        HT_ERROR_OUT << e << HT_END;
+        notification_body += format("\nProblem shutting down %s: %s - %s",
+                                    m_location.c_str(),
+                                    Error::get_text(e.code()), e.what());
+      }
+      String notification_subject =
+        format("Server registration error for %s (%s)", m_location.c_str(),
+               m_rsc->hostname().c_str());
+      m_context->notification_hook(notification_subject, notification_body);
+      OperationPtr operation = new OperationRecover(m_context, m_rsc);
+      try {
+        m_context->op->add_operation(operation);
+      }
+      catch (Exception &e) {
+        // Only exception thrown is Error::MASTER_OPERATION_IN_PROGRESS
+      }
+      complete_ok();
+      return;
     }
   }
 
@@ -293,6 +297,7 @@ void OperationRegisterServer::display_state(std::ostream &os) {
 void OperationRegisterServer::decode_request(const uint8_t **bufp, size_t *remainp) {
   m_location = Serialization::decode_vstr(bufp, remainp);
   m_listen_port = Serialization::decode_i16(bufp, remainp);
+  m_lock_held = Serialization::decode_bool(bufp, remainp);
   m_system_stats.decode(bufp, remainp);
   m_register_ts = Serialization::decode_i64(bufp, remainp);
 }

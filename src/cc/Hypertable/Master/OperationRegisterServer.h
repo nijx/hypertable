@@ -57,6 +57,7 @@ namespace Hypertable {
     InetAddr m_public_addr;
     int64_t m_register_ts;
     int64_t m_received_ts;
+    bool m_lock_held;
   };
 
 } // namespace Hypertable
