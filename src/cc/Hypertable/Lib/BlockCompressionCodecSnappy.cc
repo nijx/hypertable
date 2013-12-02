@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -52,18 +52,18 @@ void BlockCompressionCodecSnappy::set_args(const Args &args) {
 
 void
 BlockCompressionCodecSnappy::deflate(const DynamicBuffer &input,
-    DynamicBuffer &output, BlockCompressionHeader &header, size_t reserve) {
-  output.reserve(header.length()+snappy::MaxCompressedLength(input.fill())+reserve);
+    DynamicBuffer &output, BlockHeader &header, size_t reserve) {
+  output.reserve(header.encoded_length()+snappy::MaxCompressedLength(input.fill())+reserve);
   size_t outlen;
   snappy::RawCompress((const char *)input.base, input.fill(), 
-                (char *)output.base+header.length(), &outlen);
+                (char *)output.base+header.encoded_length(), &outlen);
 
   HT_ASSERT(outlen+reserve <= output.size);
 
   /* check for an incompressible block */
   if (outlen >= input.fill()) {
     header.set_compression_type(NONE);
-    memcpy(output.base+header.length(), input.base, input.fill());
+    memcpy(output.base+header.encoded_length(), input.base, input.fill());
     header.set_data_length(input.fill());
     header.set_data_zlength(input.fill());
   }
@@ -73,7 +73,7 @@ BlockCompressionCodecSnappy::deflate(const DynamicBuffer &input,
     header.set_data_zlength(outlen);
   }
 
-  header.set_data_checksum(fletcher32(output.base + header.length(),
+  header.set_data_checksum(fletcher32(output.base + header.encoded_length(),
                 header.get_data_zlength()));
 
   output.ptr = output.base;
@@ -84,7 +84,7 @@ BlockCompressionCodecSnappy::deflate(const DynamicBuffer &input,
 
 void
 BlockCompressionCodecSnappy::inflate(const DynamicBuffer &input,
-    DynamicBuffer &output, BlockCompressionHeader &header) {
+    DynamicBuffer &output, BlockHeader &header) {
   const uint8_t *msg_ptr = input.base;
   size_t remaining = input.fill();
 

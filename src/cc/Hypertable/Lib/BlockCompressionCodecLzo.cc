@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -62,19 +62,19 @@ BlockCompressionCodecLzo::~BlockCompressionCodecLzo() {
  */
 void
 BlockCompressionCodecLzo::deflate(const DynamicBuffer &input,
-    DynamicBuffer &output, BlockCompressionHeader &header, size_t reserve) {
+    DynamicBuffer &output, BlockHeader &header, size_t reserve) {
   uint32_t avail_out = (input.fill() + input.fill() / 16 + 64 + 3 + 4);
   int ret;
   lzo_uint out_len = avail_out;
   uint8_t *fence_ptr = 0;
 
   output.clear();
-  output.reserve(header.length() + avail_out + reserve);
+  output.reserve(header.encoded_length() + avail_out + reserve);
 
-  fence_ptr = output.base + header.length() + (avail_out-4);
+  fence_ptr = output.base + header.encoded_length() + (avail_out-4);
   memcpy(fence_ptr, fence_marker, 4);
 
-  ret = lzo1x_1_compress(input.base, input.fill(), output.base+header.length(),
+  ret = lzo1x_1_compress(input.base, input.fill(), output.base+header.encoded_length(),
                          &out_len, m_workmem);
   assert(ret == LZO_E_OK);
   (void)ret;
@@ -82,7 +82,7 @@ BlockCompressionCodecLzo::deflate(const DynamicBuffer &input,
   /* check for an incompressible block */
   if (out_len >= input.fill()) {
     header.set_compression_type(NONE);
-    memcpy(output.base+header.length(), input.base, input.fill());
+    memcpy(output.base+header.encoded_length(), input.base, input.fill());
     header.set_data_length(input.fill());
     header.set_data_zlength(input.fill());
   }
@@ -91,7 +91,7 @@ BlockCompressionCodecLzo::deflate(const DynamicBuffer &input,
     header.set_data_length(input.fill());
     header.set_data_zlength(out_len);
   }
-  header.set_data_checksum(fletcher32(output.base + header.length(),
+  header.set_data_checksum(fletcher32(output.base + header.encoded_length(),
                            header.get_data_zlength()));
 
   output.ptr = output.base;
@@ -108,7 +108,7 @@ BlockCompressionCodecLzo::deflate(const DynamicBuffer &input,
  */
 void
 BlockCompressionCodecLzo::inflate(const DynamicBuffer &input,
-    DynamicBuffer &output, BlockCompressionHeader &header) {
+    DynamicBuffer &output, BlockHeader &header) {
   int ret;
   const uint8_t *msg_ptr = input.base;
   size_t remaining = input.fill();

@@ -319,6 +319,8 @@ namespace Hypertable {
       m_index_refcount--;
     }
 
+    virtual uint16_t block_header_format() = 0;
+
     static const char DATA_BLOCK_MAGIC[10];
     static const char INDEX_FIXED_BLOCK_MAGIC[10];
     static const char INDEX_VARIABLE_BLOCK_MAGIC[10];

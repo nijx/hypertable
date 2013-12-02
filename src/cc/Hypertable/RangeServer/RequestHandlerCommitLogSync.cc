@@ -43,8 +43,9 @@ void RequestHandlerCommitLogSync::run() {
   size_t decode_remain = m_event->payload_len;
 
   try {
+    uint64_t cluster_id = Serialization::decode_i64(&decode_ptr, &decode_remain);
     table.decode(&decode_ptr, &decode_remain);
-    m_range_server->commit_log_sync(&cb, &table);
+    m_range_server->commit_log_sync(&cb, cluster_id, &table);
   }
   catch (Exception &e) {
     HT_ERROR_OUT << e << HT_END;

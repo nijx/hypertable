@@ -19,22 +19,23 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "Common/Config.h"
-#include "Common/Timer.h"
+#include <Common/Compat.h>
+#include <Common/Config.h>
+#include <Common/Timer.h>
 
-#include "Key.h"
-#include "KeySpec.h"
-#include "Table.h"
-#include "TableMutatorAsyncDispatchHandler.h"
-#include "TableMutatorAsyncHandler.h"
-#include "TableMutatorAsyncScatterBuffer.h"
-#include "RangeServerProtocol.h"
+#include <Hypertable/Lib/ClusterId.h>
+#include <Hypertable/Lib/Key.h>
+#include <Hypertable/Lib/KeySpec.h>
+#include <Hypertable/Lib/RangeServerClient.h>
+#include <Hypertable/Lib/Table.h>
+#include <Hypertable/Lib/TableMutatorAsyncDispatchHandler.h>
+#include <Hypertable/Lib/TableMutatorAsyncHandler.h>
 
 #include <poll.h>
 
-using namespace Hypertable;
+#include "TableMutatorAsyncScatterBuffer.h"
 
+using namespace Hypertable;
 
 TableMutatorAsyncScatterBuffer::TableMutatorAsyncScatterBuffer(Comm *comm,
     ApplicationQueueInterfacePtr &app_queue, TableMutatorAsync *mutator,
@@ -299,8 +300,9 @@ void TableMutatorAsyncScatterBuffer::send(uint32_t flags) {
     try {
       m_send_flags = flags;
       send_buffer->pending_updates.own = false;
-      m_range_server.update(send_buffer->addr, m_table_identifier,
-                            send_buffer->send_count, send_buffer->pending_updates, flags,
+      m_range_server.update(send_buffer->addr, ClusterId::get(),
+                            m_table_identifier, send_buffer->send_count,
+                            send_buffer->pending_updates, flags,
                             send_buffer->dispatch_handler.get());
 
       outstanding = true;

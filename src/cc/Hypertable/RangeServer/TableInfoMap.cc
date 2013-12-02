@@ -28,6 +28,7 @@
 #include "Common/Compat.h"
 #include "Common/FailureInducer.h"
 
+#include "Hypertable/Lib/ClusterId.h"
 #include "Hypertable/Lib/CommitLog.h"
 #include "Hypertable/Lib/CommitLogReader.h"
 
@@ -129,7 +130,7 @@ void TableInfoMap::add_staged_range(const TableIdentifier *table, RangePtr &rang
 
       commit_log_reader->get_linked_logs(linked_logs);
 
-      if ((error = log->link_log(commit_log_reader.get())) != Error::OK)
+      if ((error = log->link_log(ClusterId::get(), commit_log_reader.get())) != Error::OK)
         HT_THROWF(error, "Unable to link transfer log (%s) into commit log(%s)",
                   transfer_log, log->get_log_dir().c_str());
     }

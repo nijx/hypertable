@@ -105,12 +105,13 @@ namespace Hypertable {
 
     /** Writes a block of updates to the commit log.
      *
+     * @param cluster_id Originating cluster ID
      * @param buffer block of updates to commit
      * @param revision most recent revision in buffer
      * @param sync syncs the commit log updates to disk
      * @return Error::OK on success or error code on failure
      */
-    int write(DynamicBuffer &buffer, int64_t revision, bool sync=true);
+    int write(uint64_t cluster_id, DynamicBuffer &buffer, int64_t revision, bool sync=true);
 
     /** Sync previous updates written to commit log.
      *
@@ -120,10 +121,11 @@ namespace Hypertable {
 
     /** Links an external log into this log.
      *
+     * @param cluster_id Originating cluster ID
      * @param log_base pointer to commit log object to link in
      * @return Error::OK on success or error code on failure
      */
-    int link_log(CommitLogBase *log_base);
+    int link_log(uint64_t cluster_id, CommitLogBase *log_base);
 
     /** Closes the log.  Writes the trailer and closes the file
      *
@@ -191,7 +193,7 @@ namespace Hypertable {
     void initialize(const String &log_dir,
                     PropertiesPtr &, CommitLogBase *init_log, bool is_meta);
     int roll(CommitLogFileInfo **clfip=0);
-    int compress_and_write(DynamicBuffer &input, BlockCompressionHeader *header,
+    int compress_and_write(DynamicBuffer &input, BlockHeader *header,
                            int64_t revision, bool sync);
     void remove_file_info(CommitLogFileInfo *fi, StringSet &removed_logs);
 

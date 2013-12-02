@@ -1673,7 +1673,7 @@ void Range::unlock() {
  * Called before range has been flipped live so no locking needed
  */
 void Range::replay_transfer_log(CommitLogReader *commit_log_reader) {
-  BlockCompressionHeaderCommitLog header;
+  BlockHeaderCommitLog header;
   const uint8_t *base, *ptr, *end;
   size_t len;
   ByteString key, value;

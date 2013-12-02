@@ -27,47 +27,46 @@
 #ifndef HYPERTABLE_RANGESERVER_H
 #define HYPERTABLE_RANGESERVER_H
 
+#include <Common/Logger.h>
+#include <Common/Properties.h>
+#include <Common/HashMap.h>
+
+#include <AsyncComm/ApplicationQueue.h>
+#include <AsyncComm/Comm.h>
+#include <AsyncComm/Event.h>
+#include <AsyncComm/ResponseCallback.h>
+
+#include <Hyperspace/Session.h>
+
+#include <Hypertable/Lib/Cells.h>
+#include <Hypertable/Lib/MasterClient.h>
+#include <Hypertable/Lib/RangeState.h>
+#include <Hypertable/Lib/Types.h>
+#include <Hypertable/Lib/NameIdMapper.h>
+#include <Hypertable/Lib/StatsRangeServer.h>
+
+#include <Hypertable/RangeServer/Global.h>
+#include <Hypertable/RangeServer/GroupCommitInterface.h>
+#include <Hypertable/RangeServer/GroupCommitTimerHandler.h>
+#include <Hypertable/RangeServer/MaintenanceScheduler.h>
+#include <Hypertable/RangeServer/MetaLogEntityRange.h>
+#include <Hypertable/RangeServer/QueryCache.h>
+#include <Hypertable/RangeServer/LoadStatistics.h>
+#include <Hypertable/RangeServer/ResponseCallbackCreateScanner.h>
+#include <Hypertable/RangeServer/ResponseCallbackFetchScanblock.h>
+#include <Hypertable/RangeServer/ResponseCallbackGetStatistics.h>
+#include <Hypertable/RangeServer/ResponseCallbackUpdate.h>
+#include <Hypertable/RangeServer/ResponseCallbackPhantomUpdate.h>
+#include <Hypertable/RangeServer/ResponseCallbackAcknowledgeLoad.h>
+#include <Hypertable/RangeServer/TableInfo.h>
+#include <Hypertable/RangeServer/TableInfoMap.h>
+#include <Hypertable/RangeServer/TimerHandler.h>
+#include <Hypertable/RangeServer/PhantomRangeMap.h>
+#include <Hypertable/RangeServer/ServerState.h>
+
 #include <boost/thread/condition.hpp>
 
 #include <map>
-
-#include "Common/Logger.h"
-#include "Common/Properties.h"
-#include "Common/HashMap.h"
-
-#include "AsyncComm/ApplicationQueue.h"
-#include "AsyncComm/Comm.h"
-#include "AsyncComm/Event.h"
-#include "AsyncComm/ResponseCallback.h"
-
-#include "Hyperspace/Session.h"
-
-#include "Hypertable/Lib/Cells.h"
-#include "Hypertable/Lib/MasterClient.h"
-#include "Hypertable/Lib/RangeState.h"
-#include "Hypertable/Lib/Types.h"
-#include "Hypertable/Lib/NameIdMapper.h"
-#include "Hypertable/Lib/StatsRangeServer.h"
-
-#include "Global.h"
-#include "GroupCommitInterface.h"
-#include "GroupCommitTimerHandler.h"
-#include "MaintenanceScheduler.h"
-#include "MetaLogEntityRange.h"
-#include "QueryCache.h"
-#include "LoadStatistics.h"
-#include "ResponseCallbackCreateScanner.h"
-#include "ResponseCallbackFetchScanblock.h"
-#include "ResponseCallbackGetStatistics.h"
-#include "ResponseCallbackUpdate.h"
-#include "ResponseCallbackPhantomUpdate.h"
-#include "ResponseCallbackAcknowledgeLoad.h"
-
-#include "TableInfo.h"
-#include "TableInfoMap.h"
-#include "TimerHandler.h"
-#include "PhantomRangeMap.h"
-#include "ServerState.h"
 
 namespace Hypertable {
   using namespace Hyperspace;
@@ -107,11 +106,16 @@ namespace Hypertable {
                           const vector<QualifiedRangeSpec> &ranges);
     void update_schema(ResponseCallback *, const TableIdentifier *,
                        const char *);
-    void update(ResponseCallbackUpdate *, const TableIdentifier *,
-                uint32_t count, StaticBuffer &, uint32_t flags);
+
+    /** Inserts data into a table.
+     */
+    void update(ResponseCallbackUpdate *cb, uint64_t cluster_id,
+                const TableIdentifier *table, uint32_t count,
+                StaticBuffer &buffer, uint32_t flags);
     void batch_update(std::vector<TableUpdate *> &updates, boost::xtime expire_time);
 
-    void commit_log_sync(ResponseCallback *, const TableIdentifier *);
+    void commit_log_sync(ResponseCallback *cb, uint64_t cluster_id,
+                         const TableIdentifier *table);
 
     /**
      */
@@ -227,8 +231,9 @@ namespace Hypertable {
     bool live(const vector<QualifiedRangeSpec> &ranges);
     bool live(const QualifiedRangeSpec &spec);
 
-    void group_commit_add(EventPtr &event, SchemaPtr &schema, const TableIdentifier *table,
-                     uint32_t count, StaticBuffer &buffer, uint32_t flags);
+    void group_commit_add(EventPtr &event, uint64_t cluster_id,
+                          SchemaPtr &schema, const TableIdentifier *table,
+                          uint32_t count, StaticBuffer &buffer, uint32_t flags);
 
     /** Performs a "test and set" operation on #m_get_statistics_outstanding
      * @param value New value for #m_get_statistics_outstanding

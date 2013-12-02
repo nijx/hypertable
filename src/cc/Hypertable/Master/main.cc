@@ -44,6 +44,7 @@ extern "C" {
 
 #include "Hypertable/Lib/Config.h"
 #include "Hypertable/Lib/MetaLogReader.h"
+#include "Hypertable/Lib/ClusterId.h"
 #include "DfsBroker/Lib/Client.h"
 
 #include "ConnectionHandler.h"
@@ -184,6 +185,10 @@ int main(int argc, char **argv) {
       HT_INFOF("Unable to write state file %s", state_file.c_str());
 
     obtain_master_lock(context);
+
+    // Load (and possibly generate) the cluster ID
+    ClusterId cluster_id(context->hyperspace, ClusterId::GENERATE_IF_NOT_FOUND);
+    HT_INFOF("Cluster id is %llu", (Llu)ClusterId::get());
 
     if (!FileUtils::unlink(state_file))
       HT_INFOF("Unable to delete state file %s", state_file.c_str());

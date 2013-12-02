@@ -25,7 +25,7 @@
 #include "Common/Error.h"
 #include "Common/System.h"
 
-#include "Hypertable/Lib/BlockCompressionHeader.h"
+#include "Hypertable/Lib/BlockHeaderCellStore.h"
 #include "Global.h"
 #include "CellStoreBlockIndexArray.h"
 
@@ -242,7 +242,7 @@ bool CellStoreScannerIntervalBlockIndex<IndexT>::fetch_next_block(bool eob) {
 	buf.ptr = buf.base + m_block.zlength;
 
         /** inflate compressed block **/
-        BlockCompressionHeader header;
+        BlockHeaderCellStore header(m_cellstore->block_header_format());
 
         m_zcodec->inflate(buf, expand_buf, header);
 

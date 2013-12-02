@@ -25,9 +25,12 @@
  * accumulating phantom update data for a phantom range.
  */
 
-#include "Common/Compat.h"
+#include <Common/Compat.h>
 
-#include "Global.h"
+#include <Hypertable/Lib/ClusterId.h>
+
+#include <Hypertable/RangeServer/Global.h>
+
 #include "FragmentData.h"
 
 using namespace std;
@@ -108,7 +111,7 @@ void FragmentData::merge(TableIdentifier &table, RangePtr &range,
     HT_ASSERT(dbuf.ptr-dbuf.base <= (long)dbuf.size);
 
     if (decode_remain)
-      log->write(dbuf, latest_revision, false);
+      log->write(ClusterId::get(), dbuf, latest_revision, false);
   }
 
   HT_INFOF("Just added %d key/value pairs (%lld bytes)",

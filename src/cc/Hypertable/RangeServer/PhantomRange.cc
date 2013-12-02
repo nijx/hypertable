@@ -140,7 +140,7 @@ void PhantomRange::populate_range_and_log(FilesystemPtr &log_dfs,
 
   // Scan log to load blocks and determine if log is empty
   m_phantom_log = new CommitLogReader(log_dfs, m_phantom_logname);
-  BlockCompressionHeaderCommitLog header;
+  BlockHeaderCommitLog header;
   const uint8_t *base;
   size_t len;
   while (m_phantom_log->next(&base, &len, &header))

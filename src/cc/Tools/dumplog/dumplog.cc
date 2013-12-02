@@ -140,7 +140,7 @@ namespace {
   void
   display_log(DfsBroker::Client *dfs_client, const String &prefix,
               CommitLogReader *log_reader, bool display_values) {
-    BlockCompressionHeaderCommitLog header;
+    BlockHeaderCommitLog header;
     const uint8_t *base;
     size_t len;
     const uint8_t *ptr, *end;
@@ -193,7 +193,7 @@ namespace {
   display_log_block_summary(DfsBroker::Client *dfs_client, const String &prefix,
       CommitLogReader *log_reader) {
     CommitLogBlockInfo binfo;
-    BlockCompressionHeaderCommitLog header;
+    BlockHeaderCommitLog header;
 
     while (log_reader->next_raw_block(&binfo, &header)) {
 
@@ -227,7 +227,7 @@ namespace {
   void
   display_log_valid_links(DfsBroker::Client *dfs_client, const String &prefix,
                           CommitLogReader *log_reader) {
-    BlockCompressionHeaderCommitLog header;
+    BlockHeaderCommitLog header;
     const uint8_t *base;
     size_t len;
     StringSet linked_logs;

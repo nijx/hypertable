@@ -25,7 +25,7 @@
 #include "Common/Error.h"
 #include "Common/System.h"
 
-#include "Hypertable/Lib/BlockCompressionHeader.h"
+#include "Hypertable/Lib/BlockHeader.h"
 #include "Global.h"
 #include "CellStoreBlockIndexArray.h"
 #include "CellStoreScanner.h"

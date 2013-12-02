@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -26,7 +26,7 @@
 #include "Common/Filesystem.h"
 #include "Common/System.h"
 
-#include "Hypertable/Lib/BlockCompressionHeader.h"
+#include "Hypertable/Lib/BlockHeaderCellStore.h"
 #include "Global.h"
 #include "CellStoreBlockIndexArray.h"
 
@@ -250,11 +250,11 @@ bool CellStoreScannerIntervalReadahead<IndexT>::fetch_next_block_readahead(bool 
 
     /** Read header **/
     try {
-      BlockCompressionHeader header;
-      DynamicBuffer input_buf( header.length() );
+      BlockHeaderCellStore header(m_cellstore->block_header_format());
+      DynamicBuffer input_buf( header.encoded_length() );
 
-      nread = Global::dfs->read(m_fd, input_buf.base, header.length() );
-      HT_EXPECT(nread == header.length(), Error::RANGESERVER_SHORT_CELLSTORE_READ);
+      nread = Global::dfs->read(m_fd, input_buf.base, header.encoded_length() );
+      HT_EXPECT(nread == header.encoded_length(), Error::RANGESERVER_SHORT_CELLSTORE_READ);
 
       size_t remaining = nread;
 
@@ -262,8 +262,8 @@ bool CellStoreScannerIntervalReadahead<IndexT>::fetch_next_block_readahead(bool 
 
       size_t extra = 0;
       if (m_oflags & Filesystem::OPEN_FLAG_DIRECTIO) {
-        if ((header.length()+header.get_data_zlength())%HT_DIRECT_IO_ALIGNMENT)
-          extra = HT_DIRECT_IO_ALIGNMENT - ((header.length()+header.get_data_zlength())%HT_DIRECT_IO_ALIGNMENT);
+        if ((header.encoded_length()+header.get_data_zlength())%HT_DIRECT_IO_ALIGNMENT)
+          extra = HT_DIRECT_IO_ALIGNMENT - ((header.encoded_length()+header.get_data_zlength())%HT_DIRECT_IO_ALIGNMENT);
       }
 
       input_buf.grow( input_buf.fill() + header.get_data_zlength() + extra );

@@ -33,6 +33,7 @@
 #include "CellStoreV4.h"
 #include "CellStoreV5.h"
 #include "CellStoreV6.h"
+#include "CellStoreV7.h"
 #include "CellStoreTrailerV0.h"
 #include "CellStoreTrailerV1.h"
 #include "CellStoreTrailerV2.h"
@@ -40,6 +41,7 @@
 #include "CellStoreTrailerV4.h"
 #include "CellStoreTrailerV5.h"
 #include "CellStoreTrailerV6.h"
+#include "CellStoreTrailerV7.h"
 #include "Global.h"
 
 using namespace Hypertable;
@@ -92,7 +94,37 @@ CellStore *CellStoreFactory::open(const String &name,
     fd = Global::dfs->open(name, 0);
   }
 
-  if (version == 6) {
+  if (version == 7) {
+    CellStoreTrailerV7 trailer_v7;
+    CellStoreV7 *cellstore_v7;
+
+    if (amount < trailer_v7.size())
+      HT_THROWF(Error::RANGESERVER_CORRUPT_CELLSTORE,
+                "Bad length of CellStoreV7 file '%s' - %llu",
+                name.c_str(), (Llu)file_length);
+
+    try {
+      trailer_v7.deserialize(trailer_buf.get() + (amount - trailer_v7.size()));
+    }
+    catch (Exception &e) {
+      Global::dfs->close(fd);
+      if (!second_try && e.code() == Error::CHECKSUM_MISMATCH) {
+	fd = Global::dfs->open(name, oflags|Filesystem::OPEN_FLAG_VERIFY_CHECKSUM);
+        second_try = true;
+        goto try_again;
+      }
+      HT_ERRORF("Problem deserializing trailer of %s", name.c_str());
+      throw;
+    }
+
+    cellstore_v7 = new CellStoreV7(Global::dfs.get());
+    cellstore_v7->open(name, start, end, fd, file_length, &trailer_v7);
+    if (!cellstore_v7)
+      HT_ERRORF("Failed to open CellStore %s [%s..%s], length=%llu",
+              name.c_str(), start.c_str(), end.c_str(), (Llu)file_length);
+    return cellstore_v7;
+  }
+  else if (version == 6) {
     CellStoreTrailerV6 trailer_v6;
     CellStoreV6 *cellstore_v6;
 

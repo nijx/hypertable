@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -19,7 +19,29 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+#include <Common/Compat.h>
+#include <Common/Init.h>
+#include <Common/Error.h>
+#include <Common/InetAddr.h>
+#include <Common/Logger.h>
+#include <Common/ScopeGuard.h>
+#include <Common/System.h>
+#include <Common/Timer.h>
+
+#include <AsyncComm/ApplicationQueue.h>
+#include <AsyncComm/Comm.h>
+#include <AsyncComm/ReactorFactory.h>
+
+#include <Hyperspace/DirEntry.h>
+
+#include <Hypertable/Master/Operation.h>
+
+#include <Hypertable/Lib/Config.h>
+#include <Hypertable/Lib/ClusterId.h>
+#include <Hypertable/Lib/HqlCommandInterpreter.h>
+
+#include <boost/algorithm/string.hpp>
+
 #include <cassert>
 #include <cstdlib>
 
@@ -27,27 +49,7 @@ extern "C" {
 #include <poll.h>
 }
 
-#include <boost/algorithm/string.hpp>
-
-#include "AsyncComm/ApplicationQueue.h"
-#include "AsyncComm/Comm.h"
-#include "AsyncComm/ReactorFactory.h"
-
-#include "Common/Init.h"
-#include "Common/Error.h"
-#include "Common/InetAddr.h"
-#include "Common/Logger.h"
-#include "Common/ScopeGuard.h"
-#include "Common/System.h"
-#include "Common/Timer.h"
-
-#include "Hyperspace/DirEntry.h"
-#include "Hypertable/Lib/Config.h"
-
-#include "Hypertable/Master/Operation.h"
-
 #include "Client.h"
-#include "HqlCommandInterpreter.h"
 
 using namespace std;
 using namespace Hypertable;
@@ -220,6 +222,9 @@ void Client::initialize() {
     remaining = timer.remaining();
     wait_time = (remaining < interval) ? remaining : interval;
   }
+
+  // Initialize cluster ID from Hyperspace, enabling ClusterId::get()
+  ClusterId cluster_id(m_hyperspace);
 
   m_namemap = new NameIdMapper(m_hyperspace, m_toplevel_dir);
 

@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -63,10 +63,10 @@ BlockCompressionCodecBmz::set_args(const Args &args) {
 void
 BlockCompressionCodecBmz::deflate(const DynamicBuffer &input,
                                   DynamicBuffer &output,
-                                  BlockCompressionHeader &header,
+                                  BlockHeader &header,
                                   size_t reserve) {
   size_t inlen = input.fill();
-  size_t headerlen = header.length();
+  size_t headerlen = header.encoded_length();
   size_t outlen = bmz_pack_buflen(inlen);
 
   output.reserve(outlen + headerlen + reserve);
@@ -98,7 +98,7 @@ BlockCompressionCodecBmz::deflate(const DynamicBuffer &input,
 void
 BlockCompressionCodecBmz::inflate(const DynamicBuffer &input,
                                   DynamicBuffer &output,
-                                  BlockCompressionHeader &header) {
+                                  BlockHeader &header) {
   const uint8_t *ip = input.base;
   size_t remain = input.fill();
 

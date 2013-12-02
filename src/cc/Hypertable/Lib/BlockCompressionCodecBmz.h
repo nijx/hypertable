@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -34,9 +34,9 @@ public:
 
   virtual void set_args(const Args &args);
   virtual void deflate(const DynamicBuffer &input, DynamicBuffer &output,
-                      BlockCompressionHeader &header, size_t reserve=0);
+                      BlockHeader &header, size_t reserve=0);
   virtual void inflate(const DynamicBuffer &input, DynamicBuffer &output,
-                      BlockCompressionHeader &header);
+                      BlockHeader &header);
   virtual int get_type() { return BMZ; }
 
 private:

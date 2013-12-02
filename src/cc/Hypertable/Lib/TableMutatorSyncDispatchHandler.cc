@@ -19,11 +19,13 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "AsyncComm/Protocol.h"
+#include <Common/Compat.h>
+#include <AsyncComm/Protocol.h>
 
-#include "Common/Error.h"
-#include "Common/Logger.h"
+#include <Common/Error.h>
+#include <Common/Logger.h>
+
+#include <Hypertable/Lib/ClusterId.h>
 
 #include "TableMutatorSyncDispatchHandler.h"
 
@@ -43,7 +45,7 @@ void TableMutatorSyncDispatchHandler::add(const CommAddress &addr) {
   try {
     pair<CommAddressSet::iterator, bool> res = m_pending.insert(addr);
     HT_ASSERT(res.second);
-    m_client.commit_log_sync(addr, m_table_identifier, this);
+    m_client.commit_log_sync(addr, ClusterId::get(), m_table_identifier, this);
     m_outstanding++;
   }
   catch (Exception &e) {
@@ -96,7 +98,7 @@ void TableMutatorSyncDispatchHandler::retry() {
   m_errors.clear();
   foreach_ht (CommAddress addr, m_pending) {
     try {
-      m_client.commit_log_sync(addr, m_table_identifier, this);
+      m_client.commit_log_sync(addr, ClusterId::get(), m_table_identifier, this);
     }
     catch (Exception &e) {
       ErrorResult result;

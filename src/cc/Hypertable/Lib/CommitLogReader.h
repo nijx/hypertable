@@ -33,7 +33,7 @@
 #include "Common/Filesystem.h"
 
 #include "BlockCompressionCodec.h"
-#include "BlockCompressionHeaderCommitLog.h"
+#include "BlockHeaderCommitLog.h"
 #include "CommitLogBase.h"
 #include "CommitLogBlockStream.h"
 #include "Key.h"
@@ -54,9 +54,9 @@ namespace Hypertable {
     void get_init_fragment_ids(std::vector<uint32_t> &ids);
 
     bool next_raw_block(CommitLogBlockInfo *,
-                        BlockCompressionHeaderCommitLog *);
+                        BlockHeaderCommitLog *);
     bool next(const uint8_t **blockp, size_t *lenp,
-              BlockCompressionHeaderCommitLog *);
+              BlockHeaderCommitLog *);
 
     void reset() {
       m_fragment_queue_offset = 0;

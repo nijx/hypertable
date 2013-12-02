@@ -92,7 +92,7 @@ CommitLogReader::CommitLogReader(FilesystemPtr &fs, const String &log_dir,
 
 bool
 CommitLogReader::next_raw_block(CommitLogBlockInfo *infop,
-                                BlockCompressionHeaderCommitLog *header) {
+                                BlockHeaderCommitLog *header) {
   LogFragmentQueue::iterator fragment_queue_iter;
 
   try_again:
@@ -129,7 +129,7 @@ CommitLogReader::next_raw_block(CommitLogBlockInfo *infop,
 
   if (header->check_magic(CommitLog::MAGIC_LINK)) {
     assert(header->get_compression_type() == BlockCompressionCodec::NONE);
-    String log_dir = (const char *)(infop->block_ptr + header->length());
+    String log_dir = (const char *)(infop->block_ptr + header->encoded_length());
     boost::trim_right_if(log_dir, boost::is_any_of("/"));
     m_linked_log_hashes.insert(md5_hash(log_dir.c_str()));
     m_linked_logs.insert(log_dir);
@@ -156,7 +156,7 @@ void CommitLogReader::get_init_fragment_ids(vector<uint32_t> &ids) {
 
 bool
 CommitLogReader::next(const uint8_t **blockp, size_t *lenp,
-                      BlockCompressionHeaderCommitLog *header) {
+                      BlockHeaderCommitLog *header) {
   CommitLogBlockInfo binfo;
 
   while (next_raw_block(&binfo, header)) {
@@ -272,10 +272,14 @@ void CommitLogReader::load_fragments(String log_dir, CommitLogFileInfo *parent) 
       fi->log_dir_hash = md5_hash(log_dir.c_str());
       fi->size = m_fs->length(log_dir + "/" + listing[i]);
       fi->parent = parent;
-      if (fi->size > 0) {
+      if (fi->size > CommitLogBlockStream::header_size()) {
         if (parent)
           parent->references++;
         m_fragment_queue.push_back(fi);
+      }
+      else {
+        delete fi;
+        fi = 0;
       }
     }
   }

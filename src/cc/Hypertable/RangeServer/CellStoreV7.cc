@@ -20,8 +20,8 @@
  */
 
 /** @file
- * Definitions for CellStoreV6.
- * This file contains the variable and method definitions for CellStoreV6, a
+ * Definitions for CellStoreV7.
+ * This file contains the variable and method definitions for CellStoreV7, a
  * class for creating and loading version 6 cell store files.
  */
 
@@ -45,9 +45,9 @@
 #include "Hypertable/Lib/Key.h"
 #include "Hypertable/Lib/Schema.h"
 
-#include "CellStoreV6.h"
+#include "CellStoreV7.h"
 #include "CellStoreInfo.h"
-#include "CellStoreTrailerV6.h"
+#include "CellStoreTrailerV7.h"
 #include "CellStoreScanner.h"
 
 #include "FileBlockCache.h"
@@ -61,11 +61,11 @@ using namespace Hypertable;
 
 namespace {
   const uint32_t MAX_APPENDS_OUTSTANDING = 3;
-  const uint16_t BLOCK_HEADER_FORMAT = 0;
+  const uint16_t BLOCK_HEADER_VERSION = 1;
 }
 
 
-CellStoreV6::CellStoreV6(Filesystem *filesys, Schema *schema)
+CellStoreV7::CellStoreV7(Filesystem *filesys, Schema *schema)
   : m_filesys(filesys), m_schema(schema), m_fd(-1), m_filename(),
     m_64bit_index(false), m_compressor(0), m_buffer(0),
     m_outstanding_appends(0), m_offset(0), m_file_length(0),
@@ -78,7 +78,7 @@ CellStoreV6::CellStoreV6(Filesystem *filesys, Schema *schema)
 }
 
 
-CellStoreV6::~CellStoreV6() {
+CellStoreV7::~CellStoreV7() {
   try {
     delete m_compressor;
     delete m_bloom_filter;
@@ -91,21 +91,21 @@ CellStoreV6::~CellStoreV6() {
     HT_ERROR_OUT << e << HT_END;
   }
 
-  Global::memory_tracker->subtract( sizeof(CellStoreV6) + sizeof(CellStoreInfo) + m_index_stats.bloom_filter_memory + m_index_stats.block_index_memory );
+  Global::memory_tracker->subtract( sizeof(CellStoreV7) + sizeof(CellStoreInfo) + m_index_stats.bloom_filter_memory + m_index_stats.block_index_memory );
 
 }
 
 
-BlockCompressionCodec *CellStoreV6::create_block_compression_codec() {
+BlockCompressionCodec *CellStoreV7::create_block_compression_codec() {
   return CompressorFactory::create_block_codec(
       (BlockCompressionCodec::Type)m_trailer.compression_type);
 }
 
-KeyDecompressor *CellStoreV6::create_key_decompressor() {
+KeyDecompressor *CellStoreV7::create_key_decompressor() {
   return new KeyDecompressorPrefix();
 }
 
-void CellStoreV6::split_row_estimate_data(SplitRowDataMapT &split_row_data) {
+void CellStoreV7::split_row_estimate_data(SplitRowDataMapT &split_row_data) {
   ScopedLock lock(m_mutex);
   if (m_index_stats.block_index_memory == 0)
     load_block_index();
@@ -120,7 +120,7 @@ void CellStoreV6::split_row_estimate_data(SplitRowDataMapT &split_row_data) {
     m_index_map32.unique_row_count_estimate(split_row_data, keys_per_block);
 }
 
-void CellStoreV6::populate_index_pseudo_table_scanner(CellListScannerBuffer *scanner) {
+void CellStoreV7::populate_index_pseudo_table_scanner(CellListScannerBuffer *scanner) {
   ScopedLock lock(m_mutex);
   if (m_index_stats.block_index_memory == 0) {
     load_block_index();
@@ -140,7 +140,7 @@ void CellStoreV6::populate_index_pseudo_table_scanner(CellListScannerBuffer *sca
 }
 
 
-CellListScanner *CellStoreV6::create_scanner(ScanContextPtr &scan_ctx) {
+CellListScanner *CellStoreV7::create_scanner(ScanContextPtr &scan_ctx) {
   bool need_index =  m_restricted_range || scan_ctx->restricted_range ||
     scan_ctx->single_row || scan_ctx->has_cell_interval;
 
@@ -176,7 +176,7 @@ namespace {
 }
 
 void
-CellStoreV6::create(const char *fname, size_t max_entries,
+CellStoreV7::create(const char *fname, size_t max_entries,
                     PropertiesPtr &props, const TableIdentifier *table_id) {
   int64_t blocksize = props->get("blocksize", uint32_t(0));
   String compressor = props->get("compressor", String());
@@ -271,7 +271,7 @@ CellStoreV6::create(const char *fname, size_t max_entries,
 }
 
 
-void CellStoreV6::create_bloom_filter(bool is_approx) {
+void CellStoreV7::create_bloom_filter(bool is_approx) {
   assert(!m_bloom_filter && m_bloom_filter_items);
 
   HT_DEBUG_OUT << "Creating new BloomFilter for CellStore '"
@@ -302,14 +302,14 @@ void CellStoreV6::create_bloom_filter(bool is_approx) {
     << m_filename <<"'"<< HT_END;
 }
 
-const std::vector<String> &CellStoreV6::get_replaced_files() {
+const std::vector<String> &CellStoreV7::get_replaced_files() {
   ScopedLock lock(m_mutex);
   if (!m_replaced_files_loaded)
     load_replaced_files();
   return m_replaced_files;
 }
 
-void CellStoreV6::load_replaced_files() {
+void CellStoreV7::load_replaced_files() {
  bool second_try = false;
  int64_t amount = m_trailer.replaced_files_length;
  int64_t len = 0;
@@ -356,7 +356,7 @@ void CellStoreV6::load_replaced_files() {
   m_replaced_files_loaded = true;
 }
 
-void CellStoreV6::load_bloom_filter() {
+void CellStoreV7::load_bloom_filter() {
   size_t len;
 
   HT_ASSERT(m_index_stats.bloom_filter_memory == 0);
@@ -413,7 +413,7 @@ void CellStoreV6::load_bloom_filter() {
 
 
 
-uint64_t CellStoreV6::purge_indexes() {
+uint64_t CellStoreV7::purge_indexes() {
   uint64_t memory_purged = 0;
 
   {
@@ -443,7 +443,7 @@ uint64_t CellStoreV6::purge_indexes() {
 
 
 
-void CellStoreV6::add(const Key &key, const ByteString value) {
+void CellStoreV7::add(const Key &key, const ByteString value) {
   EventPtr event_ptr;
   DynamicBuffer zbuf;
 
@@ -458,7 +458,7 @@ void CellStoreV6::add(const Key &key, const ByteString value) {
   }
 
   if (m_buffer.fill() > (size_t)m_uncompressed_blocksize) {
-    BlockHeaderCellStore header(BLOCK_HEADER_FORMAT, DATA_BLOCK_MAGIC);
+    BlockHeaderCellStore header(BLOCK_HEADER_VERSION, DATA_BLOCK_MAGIC);
 
     m_index_builder.add_entry(m_key_compressor, m_offset);
 
@@ -554,7 +554,7 @@ void CellStoreV6::add(const Key &key, const ByteString value) {
 }
 
 
-void CellStoreV6::finalize(TableIdentifier *table_identifier) {
+void CellStoreV7::finalize(TableIdentifier *table_identifier) {
   EventPtr event_ptr;
   size_t zlen;
   DynamicBuffer zbuf(0);
@@ -563,7 +563,7 @@ void CellStoreV6::finalize(TableIdentifier *table_identifier) {
   int64_t index_memory = 0;
 
   if (m_buffer.fill() > 0) {
-    BlockHeaderCellStore header(BLOCK_HEADER_FORMAT, DATA_BLOCK_MAGIC);
+    BlockHeaderCellStore header(BLOCK_HEADER_VERSION, DATA_BLOCK_MAGIC);
 
     m_index_builder.add_entry(m_key_compressor, m_offset);
 
@@ -614,7 +614,7 @@ void CellStoreV6::finalize(TableIdentifier *table_identifier) {
    * Write fixed index
    */
   {
-    BlockHeaderCellStore header(BLOCK_HEADER_FORMAT, INDEX_FIXED_BLOCK_MAGIC);
+    BlockHeaderCellStore header(BLOCK_HEADER_VERSION, INDEX_FIXED_BLOCK_MAGIC);
     m_compressor->deflate(m_index_builder.fixed_buf(), zbuf, header, HT_DIRECT_IO_ALIGNMENT);
   }
 
@@ -634,7 +634,7 @@ void CellStoreV6::finalize(TableIdentifier *table_identifier) {
    * Write variable index
    */
   {
-    BlockHeaderCellStore header(BLOCK_HEADER_FORMAT, INDEX_VARIABLE_BLOCK_MAGIC);
+    BlockHeaderCellStore header(BLOCK_HEADER_VERSION, INDEX_VARIABLE_BLOCK_MAGIC);
     m_trailer.var_index_offset = m_offset;
     m_compressor->deflate(m_index_builder.variable_buf(), zbuf, header, HT_DIRECT_IO_ALIGNMENT);
   }
@@ -729,7 +729,7 @@ void CellStoreV6::finalize(TableIdentifier *table_identifier) {
                        m_trailer.fix_index_offset);
     m_trailer.index_entries = m_index_map64.index_entries();
     index_memory = m_index_map64.memory_used();
-    m_trailer.flags |= CellStoreTrailerV6::INDEX_64BIT;
+    m_trailer.flags |= CellStoreTrailerV7::INDEX_64BIT;
     m_disk_usage = m_index_map64.disk_used();
     fraction_covered = m_index_map64.fraction_covered();
     m_block_count = m_index_map64.index_entries();
@@ -756,6 +756,8 @@ void CellStoreV6::finalize(TableIdentifier *table_identifier) {
     boost::xtime_get(&now, boost::TIME_UTC_);
     m_trailer.create_time = ((int64_t)now.sec * 1000000000LL) + (int64_t)now.nsec;
   }
+
+  m_trailer.block_header_version = BLOCK_HEADER_VERSION;
 
   // write trailer
   if (!coalesce_with_trailer) {
@@ -801,11 +803,11 @@ void CellStoreV6::finalize(TableIdentifier *table_identifier) {
   delete [] m_column_ttl;
   m_column_ttl = 0;
 
-  Global::memory_tracker->add( sizeof(CellStoreV6) + sizeof(CellStoreInfo) + m_index_stats.block_index_memory + m_index_stats.bloom_filter_memory );
+  Global::memory_tracker->add( sizeof(CellStoreV7) + sizeof(CellStoreInfo) + m_index_stats.block_index_memory + m_index_stats.bloom_filter_memory );
 }
 
 
-void CellStoreV6::IndexBuilder::add_entry(KeyCompressorPtr &key_compressor,
+void CellStoreV7::IndexBuilder::add_entry(KeyCompressorPtr &key_compressor,
                                           int64_t offset) {
 
   // switch to 64-bit offsets if offset being added is >= 2^32
@@ -845,7 +847,7 @@ void CellStoreV6::IndexBuilder::add_entry(KeyCompressorPtr &key_compressor,
 }
 
 
-void CellStoreV6::IndexBuilder::chop() {
+void CellStoreV7::IndexBuilder::chop() {
   uint8_t *base;
   size_t len;
 
@@ -863,7 +865,7 @@ void CellStoreV6::IndexBuilder::chop() {
 
 
 void
-CellStoreV6::open(const String &fname, const String &start_row,
+CellStoreV7::open(const String &fname, const String &start_row,
                   const String &end_row, int32_t fd, int64_t file_length,
                   CellStoreTrailer *trailer) {
   m_filename = fname;
@@ -874,14 +876,14 @@ CellStoreV6::open(const String &fname, const String &start_row,
 
   m_restricted_range = !(m_start_row == "" && m_end_row == Key::END_ROW_MARKER);
 
-  m_trailer = *static_cast<CellStoreTrailerV6 *>(trailer);
+  m_trailer = *static_cast<CellStoreTrailerV7 *>(trailer);
 
   m_bloom_filter_mode = (BloomFilterMode)m_trailer.bloom_filter_mode;
 
   /** Sanity check trailer **/
-  HT_ASSERT(m_trailer.version == 6);
+  HT_ASSERT(m_trailer.version == 7);
 
-  if (m_trailer.flags & CellStoreTrailerV6::INDEX_64BIT)
+  if (m_trailer.flags & CellStoreTrailerV7::INDEX_64BIT)
     m_64bit_index = true;
 
   if (!(m_trailer.fix_index_offset < m_trailer.var_index_offset &&
@@ -894,14 +896,14 @@ CellStoreV6::open(const String &fname, const String &start_row,
   // This is necessary to get m_disk_usage and m_block_count set properly
   load_block_index();
 
-  Global::memory_tracker->add( sizeof(CellStoreV6) + sizeof(CellStoreInfo) );
+  Global::memory_tracker->add( sizeof(CellStoreV7) + sizeof(CellStoreInfo) );
 
 }
 
 
 
 void
-CellStoreV6::rescope(const String &start_row, const String &end_row) {
+CellStoreV7::rescope(const String &start_row, const String &end_row) {
   ScopedLock lock(m_mutex);
   HT_ASSERT(m_start_row.compare(start_row)<0 || m_end_row.compare(end_row)>0);
   m_start_row = start_row;
@@ -933,11 +935,11 @@ CellStoreV6::rescope(const String &start_row, const String &end_row) {
 
 
 
-void CellStoreV6::load_block_index() {
+void CellStoreV7::load_block_index() {
   int64_t amount, index_amount;
   int64_t len = 0;
   BlockCompressionCodecPtr compressor;
-  BlockHeaderCellStore header(BLOCK_HEADER_FORMAT);
+  BlockHeaderCellStore header(BLOCK_HEADER_VERSION);
   SerializedKey key;
   bool inflating_fixed=true;
   bool second_try = false;
@@ -1032,7 +1034,7 @@ void CellStoreV6::load_block_index() {
 }
 
 
-bool CellStoreV6::may_contain(ScanContextPtr &scan_context) {
+bool CellStoreV7::may_contain(ScanContextPtr &scan_context) {
 
   if (m_bloom_filter_mode == BLOOM_FILTER_DISABLED)
     return true;
@@ -1087,7 +1089,7 @@ bool CellStoreV6::may_contain(ScanContextPtr &scan_context) {
 
 
 
-void CellStoreV6::display_block_info() {
+void CellStoreV7::display_block_info() {
   ScopedLock lock(m_mutex);
   if (m_index_stats.block_index_memory == 0)
     load_block_index();
@@ -1098,6 +1100,6 @@ void CellStoreV6::display_block_info() {
 }
 
 
-uint16_t CellStoreV6::block_header_format() {
-  return BLOCK_HEADER_FORMAT;
+uint16_t CellStoreV7::block_header_format() {
+  return BLOCK_HEADER_VERSION;
 }

@@ -27,7 +27,7 @@
 #include "Common/Error.h"
 #include "Common/ReferenceCount.h"
 
-#include "BlockCompressionHeader.h"
+#include "BlockHeader.h"
 
 namespace Hypertable {
 
@@ -48,10 +48,10 @@ namespace Hypertable {
     virtual ~BlockCompressionCodec() { return; }
 
     virtual void deflate(const DynamicBuffer &input, DynamicBuffer &output,
-                         BlockCompressionHeader &header, size_t reserve=0) = 0;
+                         BlockHeader &header, size_t reserve=0) = 0;
 
     virtual void inflate(const DynamicBuffer &input, DynamicBuffer &output,
-                         BlockCompressionHeader &header) = 0;
+                         BlockHeader &header) = 0;
 
     virtual void set_args(const Args &args) {}
 

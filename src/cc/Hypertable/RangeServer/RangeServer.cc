@@ -59,6 +59,7 @@ extern "C" {
 #include "Common/SystemInfo.h"
 #include "Common/ScopeGuard.h"
 
+#include "Hypertable/Lib/ClusterId.h"
 #include "Hypertable/Lib/CommitLog.h"
 #include "Hypertable/Lib/Key.h"
 #include "Hypertable/Lib/MetaLogDefinition.h"
@@ -1014,7 +1015,7 @@ RangeServer::replay_load_range(TableInfoMap &replay_map,
 
 void RangeServer::replay_log(TableInfoMap &replay_map,
                              CommitLogReaderPtr &log_reader) {
-  BlockCompressionHeaderCommitLog header;
+  BlockHeaderCommitLog header;
   uint8_t *base;
   size_t len;
   TableIdentifier table_id;
@@ -1990,7 +1991,8 @@ RangeServer::transform_key(ByteString &bskey, DynamicBuffer *dest_bufp,
 }
 
 void
-RangeServer::commit_log_sync(ResponseCallback *cb, 
+RangeServer::commit_log_sync(ResponseCallback *cb,
+                             uint64_t cluster_id,
                              const TableIdentifier *table) {
   String errmsg;
   int error = Error::OK;
@@ -2018,12 +2020,12 @@ RangeServer::commit_log_sync(ResponseCallback *cb,
 
     // Check for group commit
     if (schema->get_group_commit_interval() > 0) {
-      group_commit_add(cb->get_event(), schema, table, 0, buffer, 0);
+      group_commit_add(cb->get_event(), cluster_id, schema, table, 0, buffer, 0);
       return;
     }
 
     // normal sync...
-    UpdateRequest *request = new UpdateRequest();
+    ClientUpdateRequest *request = new ClientUpdateRequest();
     table_update->id = *table;
     table_update->commit_interval = 0;
     table_update->total_count = 0;
@@ -2054,8 +2056,9 @@ RangeServer::commit_log_sync(ResponseCallback *cb,
  *
  */
 void
-RangeServer::update(ResponseCallbackUpdate *cb, const TableIdentifier *table,
-                    uint32_t count, StaticBuffer &buffer, uint32_t flags) {
+RangeServer::update(ResponseCallbackUpdate *cb, uint64_t cluster_id,
+                    const TableIdentifier *table, uint32_t count,
+                    StaticBuffer &buffer, uint32_t flags) {
   SchemaPtr schema;
   TableUpdate *table_update = new TableUpdate();
 
@@ -2088,7 +2091,7 @@ RangeServer::update(ResponseCallbackUpdate *cb, const TableIdentifier *table,
 
   // Check for group commit
   if (schema->get_group_commit_interval() > 0) {
-    group_commit_add(cb->get_event(), schema, table, count, buffer, flags);
+    group_commit_add(cb->get_event(), cluster_id, schema, table, count, buffer, flags);
     delete table_update;
     return;
   }
@@ -2103,7 +2106,7 @@ RangeServer::update(ResponseCallbackUpdate *cb, const TableIdentifier *table,
   table_update->total_buffer_size = buffer.size;
   table_update->flags = flags;
 
-  UpdateRequest *request = new UpdateRequest();
+  ClientUpdateRequest *request = new ClientUpdateRequest();
   request->buffer = buffer;
   request->count = count;
   request->event = cb->get_event();
@@ -2237,7 +2240,7 @@ void RangeServer::update_qualify_and_transform() {
       table_update->id.encode(&table_update->go_buf.ptr);
       table_update->go_buf.set_mark();
 
-      foreach_ht (UpdateRequest *request, table_update->requests) {
+      foreach_ht (ClientUpdateRequest *request, table_update->requests) {
         uc->total_updates++;
 
         mod_end = request->buffer.base + request->buffer.size;
@@ -2624,7 +2627,7 @@ void RangeServer::update_commit() {
      * Commit ROOT mutations
      */
     if (uc->root_buf.ptr > uc->root_buf.mark) {
-      if ((error = Global::root_log->write(uc->root_buf, uc->last_revision)) != Error::OK) {
+      if ((error = Global::root_log->write(ClusterId::get(), uc->root_buf, uc->last_revision)) != Error::OK) {
         HT_FATALF("Problem writing %d bytes to ROOT commit log - %s",
                   (int)uc->root_buf.fill(), Error::get_text(error));
       }
@@ -2638,7 +2641,7 @@ void RangeServer::update_commit() {
       for (hash_map<Range *, RangeUpdateList *>::iterator iter = table_update->range_map.begin(); iter != table_update->range_map.end(); ++iter) {
         if ((*iter).second->transfer_buf.ptr > (*iter).second->transfer_buf.mark) {
           committed_transfer_data += (*iter).second->transfer_buf.ptr - (*iter).second->transfer_buf.mark;
-          if ((error = (*iter).second->transfer_log->write((*iter).second->transfer_buf, (*iter).second->latest_transfer_revision)) != Error::OK) {
+          if ((error = (*iter).second->transfer_log->write(ClusterId::get(), (*iter).second->transfer_buf, (*iter).second->latest_transfer_revision)) != Error::OK) {
             table_update->error = error;
             table_update->error_msg = format("Problem writing %d bytes to transfer log",
                                              (int)(*iter).second->transfer_buf.fill());
@@ -2673,7 +2676,7 @@ void RangeServer::update_commit() {
           log = Global::system_log;
         }
 
-        if ((error = log->write(table_update->go_buf, uc->last_revision, sync)) != Error::OK) {
+        if ((error = log->write(ClusterId::get(), table_update->go_buf, uc->last_revision, sync)) != Error::OK) {
           table_update->error_msg = format("Problem writing %d bytes to commit log (%s) - %s",
                                            (int)table_update->go_buf.fill(),
                                            log->get_log_dir().c_str(),
@@ -2828,7 +2831,7 @@ void RangeServer::update_add_and_respond() {
         }
       }
 
-      foreach_ht (UpdateRequest *request, table_update->requests) {
+      foreach_ht (ClientUpdateRequest *request, table_update->requests) {
         ResponseCallbackUpdate cb(m_comm, request->event);
 
         if (table_update->error != Error::OK) {
@@ -3657,7 +3660,7 @@ void RangeServer::replay_fragments(ResponseCallback *cb, int64_t op_id,
       }
     }
 
-    BlockCompressionHeaderCommitLog header;
+    BlockHeaderCommitLog header;
     uint8_t *base;
     size_t len;
     TableIdentifier table_id;
@@ -4063,7 +4066,7 @@ void RangeServer::phantom_prepare_ranges(ResponseCallback *cb, int64_t op_id,
       HT_ASSERT(phantom_log && log);
       int error = Error::OK;
       if (!is_empty
-          && (error = log->link_log(phantom_log.get())) != Error::OK) {
+          && (error = log->link_log(ClusterId::get(), phantom_log.get())) != Error::OK) {
 
         String msg = format("Problem linking phantom log '%s' for range %s[%s..%s]",
                             phantom_range->get_phantom_logname().c_str(),
@@ -4542,13 +4545,16 @@ RangeServer::wait_for_recovery_finish(const TableIdentifier *table,
   return true;
 }
 
-void RangeServer::group_commit_add(EventPtr &event, SchemaPtr &schema, const TableIdentifier *table,
-                                   uint32_t count, StaticBuffer &buffer, uint32_t flags) {
+void
+RangeServer::group_commit_add(EventPtr &event, uint64_t cluster_id,
+                              SchemaPtr &schema, const TableIdentifier *table,
+                              uint32_t count, StaticBuffer &buffer,
+                              uint32_t flags) {
   ScopedLock lock(m_mutex);
   if (!m_group_commit) {
     m_group_commit = new GroupCommit(this);
     HT_ASSERT(!m_group_commit_timer_handler);
     m_group_commit_timer_handler = new GroupCommitTimerHandler(m_comm, this, m_app_queue);
   }
-  m_group_commit->add(event, schema, table, count, buffer, flags);
+  m_group_commit->add(event, cluster_id, schema, table, count, buffer, flags);
 }

@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -51,15 +51,15 @@ BlockCompressionCodecQuicklz::~BlockCompressionCodecQuicklz() {
  */
 void
 BlockCompressionCodecQuicklz::deflate(const DynamicBuffer &input,
-    DynamicBuffer &output, BlockCompressionHeader &header, size_t reserve) {
+    DynamicBuffer &output, BlockHeader &header, size_t reserve) {
   uint32_t avail_out = input.fill() + 400;
   size_t len;
 
   output.clear();
-  output.reserve(header.length() + avail_out + reserve);
+  output.reserve(header.encoded_length() + avail_out + reserve);
 
   // compress
-  len = qlz_compress((char *)input.base, (char *)output.base+header.length(),
+  len = qlz_compress((char *)input.base, (char *)output.base+header.encoded_length(),
                      input.fill(), &m_compress);
 
   if (len == 0)
@@ -68,7 +68,7 @@ BlockCompressionCodecQuicklz::deflate(const DynamicBuffer &input,
   /* check for an incompressible block */
   if (len >= input.fill()) {
     header.set_compression_type(NONE);
-    memcpy(output.base+header.length(), input.base, input.fill());
+    memcpy(output.base+header.encoded_length(), input.base, input.fill());
     header.set_data_length(input.fill());
     header.set_data_zlength(input.fill());
   }
@@ -77,7 +77,7 @@ BlockCompressionCodecQuicklz::deflate(const DynamicBuffer &input,
     header.set_data_length(input.fill());
     header.set_data_zlength(len);
   }
-  header.set_data_checksum(fletcher32(output.base + header.length(),
+  header.set_data_checksum(fletcher32(output.base + header.encoded_length(),
                            header.get_data_zlength()));
 
   output.ptr = output.base;
@@ -90,7 +90,7 @@ BlockCompressionCodecQuicklz::deflate(const DynamicBuffer &input,
  *
  */
 void BlockCompressionCodecQuicklz::inflate(const DynamicBuffer &input,
-    DynamicBuffer &output, BlockCompressionHeader &header) {
+    DynamicBuffer &output, BlockHeader &header) {
   const uint8_t *msg_ptr = input.base;
   size_t remaining = input.fill();
 
