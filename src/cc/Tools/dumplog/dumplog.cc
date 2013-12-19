@@ -200,6 +200,8 @@ namespace {
 
       HT_ASSERT(header.check_magic(CommitLog::MAGIC_DATA));
 
+      printf("%s/%s\tcluster_id\t%llu\n",
+             binfo.log_dir, binfo.file_fragment, (Llu)header.get_cluster_id());
       printf("%s/%s\trevision\t%llu\n",
              binfo.log_dir, binfo.file_fragment, (Llu)header.get_revision());
       printf("%s/%s\tstart-offset\t%llu\n",
