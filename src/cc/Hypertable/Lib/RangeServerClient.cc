@@ -20,7 +20,7 @@
  */
 
 /** @file
- * Definitions for RangeServerClient
+ * Definitions for RangeServerClient.
  * This file contains definitions for RangeServerClient, a client interface
  * class to the RangeServer.
  */

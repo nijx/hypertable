@@ -19,12 +19,18 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "Common/Checksum.h"
-#include "Common/Error.h"
-#include "Common/Logger.h"
+/// @file
+/// Definitions for CommitLogBlockStream.
+/// This file contains definitions for CommitLogBlockStream, a class abstraction
+/// for reading a stream of blocks from a commit log.
+
+#include <Common/Compat.h>
 
 #include "CommitLogBlockStream.h"
+
+#include <Common/Checksum.h>
+#include <Common/Error.h>
+#include <Common/Logger.h>
 
 #include <cctype>
 #include <cstdlib>

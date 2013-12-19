@@ -28,9 +28,9 @@
 #ifndef HYPERTABLE_BLOCKHEADERCELLSTORE_H
 #define HYPERTABLE_BLOCKHEADERCELLSTORE_H
 
-#include <utility>
-
 #include <Hypertable/Lib/BlockHeader.h>
+
+#include <utility>
 
 namespace Hypertable {
 

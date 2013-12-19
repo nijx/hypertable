@@ -26,11 +26,12 @@
  */
 
 #include <Common/Compat.h>
+
+#include "BlockHeaderCommitLog.h"
+
 #include <Common/Error.h>
 #include <Common/Logger.h>
 #include <Common/Serialization.h>
-
-#include <Hypertable/Lib/BlockHeaderCommitLog.h>
 
 using namespace Hypertable;
 using namespace Serialization;

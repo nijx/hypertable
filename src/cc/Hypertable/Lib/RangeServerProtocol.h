@@ -20,7 +20,7 @@
  */
 
 /** @file
- * Declarations for RangeServerProtocol
+ * Declarations for RangeServerProtocol.
  * This file contains declarations for RangeServerProtocol, a class for
  * generating RangeServer protocol messages.
  */

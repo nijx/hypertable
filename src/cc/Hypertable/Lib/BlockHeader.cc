@@ -26,13 +26,15 @@
  */
 
 #include <Common/Compat.h>
+
+#include "BlockHeader.h"
+
 #include <Common/Serialization.h>
 #include <Common/Checksum.h>
 #include <Common/Error.h>
 #include <Common/Logger.h>
 
 #include <Hypertable/Lib/BlockCompressionCodec.h>
-#include <Hypertable/Lib/BlockHeader.h>
 
 #include <cstring>
 

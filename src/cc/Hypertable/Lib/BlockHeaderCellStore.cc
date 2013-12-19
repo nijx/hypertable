@@ -26,11 +26,12 @@
  */
 
 #include <Common/Compat.h>
+
+#include "BlockHeaderCellStore.h"
+
 #include <Common/Error.h>
 #include <Common/Logger.h>
 #include <Common/Serialization.h>
-
-#include <Hypertable/Lib/BlockHeaderCellStore.h>
 
 using namespace Hypertable;
 using namespace Serialization;

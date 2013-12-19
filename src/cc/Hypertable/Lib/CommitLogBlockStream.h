@@ -19,29 +19,45 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for CommitLogBlockStream.
+/// This file contains declarations for CommitLogBlockStream, a class abstraction
+/// for reading a stream of blocks from a commit log.
+
 #ifndef HYPERTABLE_COMMITLOGBLOCKSTREAM_H
 #define HYPERTABLE_COMMITLOGBLOCKSTREAM_H
 
-#include "Common/DynamicBuffer.h"
-#include "Common/String.h"
-#include "Common/Filesystem.h"
+#include <Hypertable/Lib/BlockHeaderCommitLog.h>
 
-#include "BlockHeaderCommitLog.h"
+#include <Common/DynamicBuffer.h>
+#include <Common/String.h>
+#include <Common/Filesystem.h>
 
 namespace Hypertable {
 
-  class CommitLogBlockInfo {
-  public:
+  /// @addtogroup libHypertable
+  /// @{
+
+  /// Holds information about an individual block
+  struct CommitLogBlockInfo {
+    /// Log directory
     const char *log_dir;
+    /// File name of log fragment within #log_dir
     const char *file_fragment;
+    /// Pointer to beginning of compressed block
     uint8_t *block_ptr;
+    /// Length of block
     size_t block_len;
+    /// Starting offset of block within fragment file
     uint64_t start_offset;
+    /// Ending offset of block within fragment file
     uint64_t end_offset;
+    /// %Error (if any) encountered while reading block
     int error;
   };
 
 
+  /// Abstraction for reading a stream of blocks from a commit log file.
   class CommitLogBlockStream {
 
   public:
@@ -135,6 +151,7 @@ namespace Hypertable {
     DynamicBuffer m_block_buffer;
   };
 
+  /// @}
 }
 
 #endif // HYPERTABLE_COMMITLOGBLOCKSTREAM_H

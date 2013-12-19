@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -19,18 +19,23 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Definitions for TableMutatorSyncDispatchHandler.
+/// This file contains definitions for TableMutatorSyncDispatchHandler, a class
+/// for issuing and responding to RangeServer::commit_log_sync() requests.
+
 #include <Common/Compat.h>
-#include <AsyncComm/Protocol.h>
+
+#include "TableMutatorSyncDispatchHandler.h"
 
 #include <Common/Error.h>
 #include <Common/Logger.h>
 
+#include <AsyncComm/Protocol.h>
+
 #include <Hypertable/Lib/ClusterId.h>
 
-#include "TableMutatorSyncDispatchHandler.h"
-
 using namespace Hypertable;
-
 
 TableMutatorSyncDispatchHandler::TableMutatorSyncDispatchHandler(
     Comm *comm, TableIdentifierManaged &table_id, time_t timeout)

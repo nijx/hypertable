@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -19,36 +19,34 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for CommitLog.
+/// This file contains declarations for CommitLog, a class for creating and
+/// appending entries to an edit log.
+
 #ifndef HYPERTABLE_COMMITLOG_H
 #define HYPERTABLE_COMMITLOG_H
+
+#include <Common/DynamicBuffer.h>
+#include <Common/ReferenceCount.h>
+#include <Common/String.h>
+#include <Common/Properties.h>
+#include <Common/Filesystem.h>
+
+#include <Hypertable/Lib/BlockCompressionCodec.h>
+#include <Hypertable/Lib/CommitLogBase.h>
+#include <Hypertable/Lib/CommitLogBlockStream.h>
+
+#include <boost/thread/xtime.hpp>
 
 #include <deque>
 #include <map>
 #include <stack>
 
-#include <boost/thread/xtime.hpp>
-
-#include "Common/DynamicBuffer.h"
-#include "Common/ReferenceCount.h"
-#include "Common/String.h"
-#include "Common/Properties.h"
-#include "Common/Filesystem.h"
-
-#include "BlockCompressionCodec.h"
-#include "Types.h"
-
-#include "CommitLogBase.h"
-#include "CommitLogBlockStream.h"
-
 namespace Hypertable {
 
-  typedef struct {
-    uint32_t distance;
-    int64_t  size;
-    int64_t  cumulative_size;
-    uint32_t fragno;
-  } CumulativeFragmentData;
-
+  /// @addtogroup libHypertable
+  /// @{
 
   /**
    * Commit log for persisting range updates.  The commit log is a directory
@@ -65,7 +63,15 @@ namespace Hypertable {
    */
 
   class CommitLog : public CommitLogBase {
+
   public:
+
+    struct CumulativeFragmentData {
+      uint32_t distance;
+      int64_t  size;
+      int64_t  cumulative_size;
+      uint32_t fragno;
+    };
 
     typedef std::map<int64_t, CumulativeFragmentData> CumulativeSizeMap;
 
@@ -209,7 +215,10 @@ namespace Hypertable {
     bool                    m_needs_roll;
   };
 
+  /// Smart pointer to CommitLog
   typedef intrusive_ptr<CommitLog> CommitLogPtr;
+
+  /// @}
 
 } // namespace Hypertable
 

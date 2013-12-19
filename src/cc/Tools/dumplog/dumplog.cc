@@ -19,27 +19,28 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include <cstdlib>
-#include <iostream>
+#include <Common/Compat.h>
+#include <Common/Error.h>
+#include <Common/InetAddr.h>
+#include <Common/Logger.h>
+#include <Common/Init.h>
+#include <Common/Usage.h>
 
-#include "Common/Error.h"
-#include "Common/InetAddr.h"
-#include "Common/Logger.h"
-#include "Common/Init.h"
-#include "Common/Usage.h"
+#include <AsyncComm/Comm.h>
+#include <AsyncComm/ConnectionManager.h>
+#include <AsyncComm/ReactorFactory.h>
 
-#include "AsyncComm/Comm.h"
-#include "AsyncComm/ConnectionManager.h"
-#include "AsyncComm/ReactorFactory.h"
+#include <DfsBroker/Lib/Config.h>
+#include <DfsBroker/Lib/Client.h>
 
-#include "DfsBroker/Lib/Config.h"
-#include "DfsBroker/Lib/Client.h"
-
-#include "Hypertable/Lib/CommitLog.h"
-#include "Hypertable/Lib/CommitLogReader.h"
+#include <Hypertable/Lib/CommitLog.h>
+#include <Hypertable/Lib/CommitLogReader.h>
+#include <Hypertable/Lib/Types.h>
 
 #include <boost/algorithm/string/predicate.hpp>
+
+#include <cstdlib>
+#include <iostream>
 
 using namespace Hypertable;
 using namespace Config;

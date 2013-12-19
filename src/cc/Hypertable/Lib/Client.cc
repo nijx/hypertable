@@ -20,6 +20,9 @@
  */
 
 #include <Common/Compat.h>
+
+#include "Client.h"
+
 #include <Common/Init.h>
 #include <Common/Error.h>
 #include <Common/InetAddr.h>
@@ -48,8 +51,6 @@
 extern "C" {
 #include <poll.h>
 }
-
-#include "Client.h"
 
 using namespace std;
 using namespace Hypertable;

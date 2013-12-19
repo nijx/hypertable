@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,7 +19,29 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+/// @file
+/// Definitions for CommitLogReader.
+/// This file contains definitions for CommitLogReader, a class for
+/// sequentially reading a commit log.
+
+#include <Common/Compat.h>
+
+#include "CommitLogReader.h"
+
+#include <Common/Config.h>
+#include <Common/Error.h>
+#include <Common/FileUtils.h>
+#include <Common/Logger.h>
+#include <Common/StringExt.h>
+#include <Common/md5.h>
+
+#include <Hypertable/Lib/BlockCompressionCodec.h>
+#include <Hypertable/Lib/CommitLog.h>
+#include <Hypertable/Lib/CommitLogBlockStream.h>
+#include <Hypertable/Lib/CompressorFactory.h>
+
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <cassert>
 #include <vector>
 
@@ -33,22 +55,6 @@ extern "C" {
 #include <sys/uio.h>
 #include <unistd.h>
 }
-
-#include <boost/algorithm/string/predicate.hpp>
-
-#include "Common/Config.h"
-#include "Common/Error.h"
-#include "Common/FileUtils.h"
-#include "Common/Logger.h"
-#include "Common/StringExt.h"
-#include "Common/md5.h"
-
-#include "Hypertable/Lib/CompressorFactory.h"
-
-#include "BlockCompressionCodec.h"
-#include "CommitLog.h"
-#include "CommitLogBlockStream.h"
-#include "CommitLogReader.h"
 
 using namespace Hypertable;
 using namespace Hypertable::Config;

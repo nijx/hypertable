@@ -19,27 +19,33 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include <cassert>
+/// @file
+/// Definitions for CommitLog.
+/// This file contains definitions for CommitLog, a class for creating and
+/// appending entries to an edit log.
 
-#include "Common/Checksum.h"
-#include "Common/Config.h"
-#include "Common/DynamicBuffer.h"
-#include "Common/Error.h"
-#include "Common/FileUtils.h"
-#include "Common/Logger.h"
-#include "Common/StringExt.h"
-#include "Common/Time.h"
-#include "Common/md5.h"
-
-#include "AsyncComm/Protocol.h"
-
-#include "Hypertable/Lib/CompressorFactory.h"
-#include "Hypertable/Lib/BlockCompressionCodec.h"
-#include "Hypertable/Lib/BlockHeaderCommitLog.h"
+#include <Common/Compat.h>
 
 #include "CommitLog.h"
-#include "CommitLogReader.h"
+
+#include <Hypertable/Lib/BlockCompressionCodec.h>
+#include <Hypertable/Lib/BlockHeaderCommitLog.h>
+#include <Hypertable/Lib/CommitLogReader.h>
+#include <Hypertable/Lib/CompressorFactory.h>
+
+#include <AsyncComm/Protocol.h>
+
+#include <Common/Checksum.h>
+#include <Common/Config.h>
+#include <Common/DynamicBuffer.h>
+#include <Common/Error.h>
+#include <Common/FileUtils.h>
+#include <Common/Logger.h>
+#include <Common/StringExt.h>
+#include <Common/Time.h>
+#include <Common/md5.h>
+
+#include <cassert>
 
 using namespace Hypertable;
 

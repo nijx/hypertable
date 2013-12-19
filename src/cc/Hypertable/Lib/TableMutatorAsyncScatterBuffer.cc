@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -19,7 +19,15 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Definitions for TableMutatorAsyncScatterBuffer.
+/// This file contains definitions for TableMutatorAsyncScatterBuffer, a class
+/// for sending updates to to a set of range servers in parallel.
+
 #include <Common/Compat.h>
+
+#include "TableMutatorAsyncScatterBuffer.h"
+
 #include <Common/Config.h>
 #include <Common/Timer.h>
 
@@ -32,8 +40,6 @@
 #include <Hypertable/Lib/TableMutatorAsyncHandler.h>
 
 #include <poll.h>
-
-#include "TableMutatorAsyncScatterBuffer.h"
 
 using namespace Hypertable;
 
