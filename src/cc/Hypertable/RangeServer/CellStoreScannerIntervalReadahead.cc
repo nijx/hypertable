@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,19 +19,25 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include <cassert>
+/// @file
+/// Definitions for CellStoreScannerIntervalReadahead.
+/// This file contains the type definitions for
+/// CellStoreScannerIntervalReadahead, a class that provides the ability to
+/// efficiently scan over (query) a portion of a CellStore using readahead.
 
-#include "Common/Error.h"
-#include "Common/Filesystem.h"
-#include "Common/System.h"
-
-#include "Hypertable/Lib/BlockHeaderCellStore.h"
-#include "Global.h"
-#include "CellStoreBlockIndexArray.h"
-
+#include <Common/Compat.h>
 #include "CellStoreScannerIntervalReadahead.h"
 
+#include <Hypertable/RangeServer/CellStoreBlockIndexArray.h>
+#include <Hypertable/RangeServer/Global.h>
+
+#include <Hypertable/Lib/BlockHeaderCellStore.h>
+
+#include <Common/Error.h>
+#include <Common/Filesystem.h>
+#include <Common/System.h>
+
+#include <cassert>
 
 using namespace Hypertable;
 

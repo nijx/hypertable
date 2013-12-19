@@ -19,27 +19,26 @@
  * 02110-1301, USA.
  */
 
-/** @file
- * Declarations for GroupCommitInterface.
- * This file contains declarations for GroupCommitInterface, an interface class
- * that is part of  the group commit mechanism to allow mutual referencing
- * between the RangeServer and the group commit implementation.
- */
+/// @file
+/// Declarations for GroupCommitInterface.
+/// This file contains declarations for GroupCommitInterface, an interface class
+/// that is part of  the group commit mechanism to allow mutual referencing
+/// between the RangeServer and the group commit implementation.
 
 #ifndef HYPERSPACE_GROUPCOMMITINTERFACE_H
 #define HYPERSPACE_GROUPCOMMITINTERFACE_H
 
-#include <Common/ReferenceCount.h>
-#include <Common/StaticBuffer.h>
-
-#include <AsyncComm/Event.h>
+#include <Hypertable/RangeServer/Range.h>
+#include <Hypertable/RangeServer/TableInfo.h>
 
 #include <Hypertable/Lib/CommitLog.h>
 #include <Hypertable/Lib/Schema.h>
 #include <Hypertable/Lib/Types.h>
 
-#include <Hypertable/RangeServer/Range.h>
-#include <Hypertable/RangeServer/TableInfo.h>
+#include <AsyncComm/Event.h>
+
+#include <Common/ReferenceCount.h>
+#include <Common/StaticBuffer.h>
 
 #include <vector>
 
@@ -165,9 +164,11 @@ namespace Hypertable {
                      StaticBuffer &buffer, uint32_t flags) = 0;
     virtual void trigger() = 0;
   };
+
+  /// Smart pointer to GroupCommitInterface
   typedef boost::intrusive_ptr<GroupCommitInterface> GroupCommitInterfacePtr;
 
-  /** @} */
+  /// @}
 }
 
 #endif // HYPERSPACE_GROUPCOMMITINTERFACE_H

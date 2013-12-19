@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -19,30 +19,36 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "Common/Filesystem.h"
-#include "Common/Serialization.h"
+/// @file
+/// Definitions for CellStoreFactory.
+/// This file contains the type definitions for CellStoreFactory, an class that
+/// provides an interface for creating CellStore objects from cell store files.
+
+#include <Common/Compat.h>
+#include "CellStoreFactory.h"
+
+#include <Hypertable/RangeServer/CellStoreTrailerV0.h>
+#include <Hypertable/RangeServer/CellStoreTrailerV1.h>
+#include <Hypertable/RangeServer/CellStoreTrailerV2.h>
+#include <Hypertable/RangeServer/CellStoreTrailerV3.h>
+#include <Hypertable/RangeServer/CellStoreTrailerV4.h>
+#include <Hypertable/RangeServer/CellStoreTrailerV5.h>
+#include <Hypertable/RangeServer/CellStoreTrailerV6.h>
+#include <Hypertable/RangeServer/CellStoreTrailerV7.h>
+#include <Hypertable/RangeServer/CellStoreV0.h>
+#include <Hypertable/RangeServer/CellStoreV1.h>
+#include <Hypertable/RangeServer/CellStoreV2.h>
+#include <Hypertable/RangeServer/CellStoreV3.h>
+#include <Hypertable/RangeServer/CellStoreV4.h>
+#include <Hypertable/RangeServer/CellStoreV5.h>
+#include <Hypertable/RangeServer/CellStoreV6.h>
+#include <Hypertable/RangeServer/CellStoreV7.h>
+#include <Hypertable/RangeServer/Global.h>
+
+#include <Common/Filesystem.h>
+#include <Common/Serialization.h>
 
 #include <boost/shared_array.hpp>
-
-#include "CellStoreFactory.h"
-#include "CellStoreV0.h"
-#include "CellStoreV1.h"
-#include "CellStoreV2.h"
-#include "CellStoreV3.h"
-#include "CellStoreV4.h"
-#include "CellStoreV5.h"
-#include "CellStoreV6.h"
-#include "CellStoreV7.h"
-#include "CellStoreTrailerV0.h"
-#include "CellStoreTrailerV1.h"
-#include "CellStoreTrailerV2.h"
-#include "CellStoreTrailerV3.h"
-#include "CellStoreTrailerV4.h"
-#include "CellStoreTrailerV5.h"
-#include "CellStoreTrailerV6.h"
-#include "CellStoreTrailerV7.h"
-#include "Global.h"
 
 using namespace Hypertable;
 

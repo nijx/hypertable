@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -19,20 +19,26 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include <cassert>
+/// @file
+/// Declarations for CellStoreScannerIntervalBlockIndex.
+/// This file contains the type declarations for
+/// CellStoreScannerIntervalBlockIndex, a class used to scan over a portion of a
+/// CellStore using its block index.
 
-#include "Common/Error.h"
-#include "Common/System.h"
-
-#include "Hypertable/Lib/BlockHeaderCellStore.h"
-#include "Global.h"
-#include "CellStoreBlockIndexArray.h"
-
+#include <Common/Compat.h>
 #include "CellStoreScannerIntervalBlockIndex.h"
 
-using namespace Hypertable;
+#include <Hypertable/RangeServer/Global.h>
+#include <Hypertable/RangeServer/CellStoreBlockIndexArray.h>
 
+#include <Hypertable/Lib/BlockHeaderCellStore.h>
+
+#include <Common/Error.h>
+#include <Common/System.h>
+
+#include <cassert>
+
+using namespace Hypertable;
 
 template <typename IndexT>
 CellStoreScannerIntervalBlockIndex<IndexT>::CellStoreScannerIntervalBlockIndex(CellStore *cellstore,

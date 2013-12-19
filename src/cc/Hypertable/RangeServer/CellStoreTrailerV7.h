@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,15 +19,24 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for CellStoreTrailerV7.
+/// This file contains the type declarations for CellStoreTrailerV7, a class
+/// representing the trailer for CellStore version 7.
+
 #ifndef HYPERTABLE_CELLSTORETRAILERV7_H
 #define HYPERTABLE_CELLSTORETRAILERV7_H
 
-#include <boost/any.hpp>
+#include <Hypertable/RangeServer/CellStoreTrailer.h>
 
-#include "CellStoreTrailer.h"
+#include <boost/any.hpp>
 
 namespace Hypertable {
 
+  /// @addtogroup RangeServer
+  /// @{
+
+  /// Represents the trailer for CellStore version 7
   class CellStoreTrailerV7 : public CellStoreTrailer {
   public:
     CellStoreTrailerV7();
@@ -118,6 +127,8 @@ namespace Hypertable {
     }
 
   };
+
+  /// @}
 
 }
 

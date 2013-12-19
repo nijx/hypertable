@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,37 +19,35 @@
  * 02110-1301, USA.
  */
 
-/** @file
- * Declarations for CellStore.
- * This file contains the type declarations for CellStore, an abstract base
- * class from which is derived concrete classes for creating and loading
- * cell store files.
- */
+/// @file
+/// Declarations for CellStore.
+/// This file contains the type declarations for CellStore, an abstract base
+/// class from which is derived concrete classes for creating and loading
+/// cell store files.
 
 #ifndef HYPERTABLE_CELLSTORE_H
 #define HYPERTABLE_CELLSTORE_H
 
+#include <Hypertable/RangeServer/CellList.h>
+#include <Hypertable/RangeServer/CellListScannerBuffer.h>
+#include <Hypertable/RangeServer/CellStoreBlockIndexArray.h>
+#include <Hypertable/RangeServer/CellStoreTrailer.h>
+#include <Hypertable/RangeServer/KeyDecompressor.h>
+
+#include <Hypertable/Lib/BlockCompressionCodec.h>
+#include <Hypertable/Lib/Types.h>
+
+#include <Common/Mutex.h>
+#include <Common/String.h>
+#include <Common/ByteString.h>
+#include <Common/Filesystem.h>
+
 #include <vector>
-
-#include "Common/Mutex.h"
-#include "Common/String.h"
-#include "Common/ByteString.h"
-#include "Common/Filesystem.h"
-
-#include "Hypertable/Lib/BlockCompressionCodec.h"
-#include "Hypertable/Lib/Types.h"
-
-#include "CellList.h"
-#include "CellListScannerBuffer.h"
-#include "CellStoreBlockIndexArray.h"
-#include "CellStoreTrailer.h"
-#include "KeyDecompressor.h"
 
 namespace Hypertable {
 
-  /** @addtogroup RangeServer
-   * @{
-   */
+  /// @addtogroup RangeServer
+  /// @{
 
   /**
    * Abstract base class for persistent cell lists (ones that are stored on
@@ -337,7 +335,7 @@ namespace Hypertable {
 
   typedef intrusive_ptr<CellStore> CellStorePtr;
 
-  /** @}*/
+  /// @}
 
 } // namespace Hypertable
 

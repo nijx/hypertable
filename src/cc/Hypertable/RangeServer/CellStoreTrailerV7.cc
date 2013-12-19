@@ -19,19 +19,24 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+/// @file
+/// Declarations for CellStoreTrailerV7.
+/// This file contains the type declarations for CellStoreTrailerV7, a class
+/// representing the trailer for CellStore version 7.
+
+#include <Common/Compat.h>
+#include "CellStoreTrailerV7.h"
+
+#include <Hypertable/Lib/KeySpec.h>
+#include <Hypertable/Lib/Schema.h>
+
+#include <Common/Checksum.h>
+#include <Common/Filesystem.h>
+#include <Common/Serialization.h>
+#include <Common/Logger.h>
+
 #include <cassert>
 #include <iostream>
-
-#include "Common/Checksum.h"
-#include "Common/Filesystem.h"
-#include "Common/Serialization.h"
-#include "Common/Logger.h"
-
-#include "Hypertable/Lib/KeySpec.h"
-#include "Hypertable/Lib/Schema.h"
-
-#include "CellStoreTrailerV7.h"
 
 using namespace std;
 using namespace Hypertable;

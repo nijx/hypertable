@@ -19,33 +19,38 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+/// @file
+/// Definitions for AccessGroup.
+/// This file contains definitions for AccessGroup, a class for providing data
+/// management and queries over an access group of a range.
+
+#include <Common/Compat.h>
+#include "AccessGroup.h"
+
+#include <Hypertable/RangeServer/CellCache.h>
+#include <Hypertable/RangeServer/CellCacheScanner.h>
+#include <Hypertable/RangeServer/CellStoreFactory.h>
+#include <Hypertable/RangeServer/CellStoreReleaseCallback.h>
+#include <Hypertable/RangeServer/CellStoreV7.h>
+#include <Hypertable/RangeServer/Config.h>
+#include <Hypertable/RangeServer/Global.h>
+#include <Hypertable/RangeServer/MaintenanceFlag.h>
+#include <Hypertable/RangeServer/MergeScannerAccessGroup.h>
+#include <Hypertable/RangeServer/MetadataNormal.h>
+#include <Hypertable/RangeServer/MetadataRoot.h>
+
+#include <Common/DynamicBuffer.h>
+#include <Common/Error.h>
+#include <Common/FailureInducer.h>
+#include <Common/md5.h>
+
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
 #include <iterator>
 #include <vector>
 
-#include "Common/DynamicBuffer.h"
-#include "Common/Error.h"
-#include "Common/FailureInducer.h"
-#include "Common/md5.h"
-
-#include "AccessGroup.h"
-#include "CellCache.h"
-#include "CellCacheScanner.h"
-#include "CellStoreFactory.h"
-#include "CellStoreReleaseCallback.h"
-#include "CellStoreV7.h"
-#include "Global.h"
-#include "MaintenanceFlag.h"
-#include "MergeScannerAccessGroup.h"
-#include "MetadataNormal.h"
-#include "MetadataRoot.h"
-#include "Config.h"
-
 using namespace Hypertable;
-
 
 AccessGroup::AccessGroup(const TableIdentifier *identifier,
                          SchemaPtr &schema, Schema::AccessGroup *ag,
