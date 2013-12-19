@@ -19,15 +19,21 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+/// @file
+/// Definitions for BlockCompressionCodecLzo.
+/// This file contains definitions for BlockCompressionCodecLzo, a class for
+/// compressing blocks using the LZO compression algorithm.
 
-#include "Common/DynamicBuffer.h"
-#include "Common/Error.h"
-#include "Common/Logger.h"
-#include "Common/Checksum.h"
+#include <Common/Compat.h>
 
-#include "ThirdParty/lzo/minilzo.h"
 #include "BlockCompressionCodecLzo.h"
+
+#include <Common/DynamicBuffer.h>
+#include <Common/Error.h>
+#include <Common/Logger.h>
+#include <Common/Checksum.h>
+
+#include <ThirdParty/lzo/minilzo.h>
 
 using namespace Hypertable;
 

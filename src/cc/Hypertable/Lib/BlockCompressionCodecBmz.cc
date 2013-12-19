@@ -19,22 +19,27 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "Common/Checksum.h"
-#include "Common/Thread.h"
-#include "Common/Logger.h"
+/// @file
+/// Definitions for BlockCompressionCodecBmz.
+/// This file contains definitions for BlockCompressionCodecBmz, a class for
+/// compressing blocks using the BMZ compression algorithm.
+
+#include <Common/Compat.h>
+
 #include "BlockCompressionCodecBmz.h"
-#include "bmz/bmz.h"
+
+#include <Common/Checksum.h>
+#include <Common/Thread.h>
+#include <Common/Logger.h>
+
+#include <Hypertable/Lib/bmz/bmz.h>
 
 using namespace Hypertable;
 using namespace std;
 
 BlockCompressionCodecBmz::BlockCompressionCodecBmz(const Args &args)
-    : m_workmem(0) {
+  : m_workmem(0), m_offset(0), m_fp_len(19) {
   HT_EXPECT(bmz_init() == BMZ_E_OK, Error::BLOCK_COMPRESSOR_INIT_ERROR);
-  // defaults
-  m_offset = 0;
-  m_fp_len = 19;
   set_args(args);
 }
 

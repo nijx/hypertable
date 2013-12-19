@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,28 +19,27 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+/// @file
+/// Definitions for BlockCompressionCodecNone.
+/// This file contains definitions for BlockCompressionCodecNone, a class for
+/// compressing blocks using the NONE compression algorithm.
 
-#include "Common/Checksum.h"
-#include "Common/DynamicBuffer.h"
-#include "Common/Error.h"
-#include "Common/Logger.h"
+#include <Common/Compat.h>
 
 #include "BlockCompressionCodecNone.h"
+
+#include <Common/Checksum.h>
+#include <Common/DynamicBuffer.h>
+#include <Common/Error.h>
+#include <Common/Logger.h>
 
 using namespace Hypertable;
 
 
-/**
- *
- */
 BlockCompressionCodecNone::BlockCompressionCodecNone(const Args &) {
 }
 
 
-/**
- *
- */
 void
 BlockCompressionCodecNone::deflate(const DynamicBuffer &input,
     DynamicBuffer &output, BlockHeader &header, size_t reserve) {
@@ -60,9 +59,6 @@ BlockCompressionCodecNone::deflate(const DynamicBuffer &input,
 }
 
 
-/**
- *
- */
 void
 BlockCompressionCodecNone::inflate(const DynamicBuffer &input,
     DynamicBuffer &output, BlockHeader &header) {
