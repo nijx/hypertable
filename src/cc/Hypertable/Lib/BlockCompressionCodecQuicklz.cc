@@ -19,36 +19,25 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Definitions for BlockCompressionCodecQuicklz.
+/// This file contains definitions for BlockCompressionCodecQuicklz, a class
+/// for compressing blocks using the QUICKLZ compression algorithm.
+
+#include <Common/Compat.h>
 
 #include "BlockCompressionCodecQuicklz.h"
 
-#include "Common/Checksum.h"
-#include "Common/Thread.h"
-#include "Common/DynamicBuffer.h"
-#include "Common/Error.h"
-#include "Common/Logger.h"
-#include "Common/String.h"
+#include <Common/Checksum.h>
+#include <Common/DynamicBuffer.h>
+#include <Common/Error.h>
+#include <Common/Logger.h>
+#include <Common/String.h>
+#include <Common/Thread.h>
 
 using namespace Hypertable;
 
-/**
- *
- */
-BlockCompressionCodecQuicklz::BlockCompressionCodecQuicklz(const Args &args) {
-}
 
-
-/**
- *
- */
-BlockCompressionCodecQuicklz::~BlockCompressionCodecQuicklz() {
-}
-
-
-
-/**
- *
- */
 void
 BlockCompressionCodecQuicklz::deflate(const DynamicBuffer &input,
     DynamicBuffer &output, BlockHeader &header, size_t reserve) {
@@ -86,9 +75,6 @@ BlockCompressionCodecQuicklz::deflate(const DynamicBuffer &input,
 }
 
 
-/**
- *
- */
 void BlockCompressionCodecQuicklz::inflate(const DynamicBuffer &input,
     DynamicBuffer &output, BlockHeader &header) {
   const uint8_t *msg_ptr = input.base;

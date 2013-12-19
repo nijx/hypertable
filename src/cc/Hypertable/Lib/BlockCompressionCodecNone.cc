@@ -35,11 +35,6 @@
 
 using namespace Hypertable;
 
-
-BlockCompressionCodecNone::BlockCompressionCodecNone(const Args &) {
-}
-
-
 void
 BlockCompressionCodecNone::deflate(const DynamicBuffer &input,
     DynamicBuffer &output, BlockHeader &header, size_t reserve) {

@@ -51,6 +51,7 @@ BlockCompressionCodecLzo::BlockCompressionCodecLzo(const Args &args) {
              "Problem initializing lzo library");
   m_workmem = new uint8_t [LZO1X_1_MEM_COMPRESS + 4];
   memcpy(&m_workmem[LZO1X_1_MEM_COMPRESS], fence_marker, 4);
+  set_args(args);
 }
 
 

@@ -36,7 +36,7 @@ namespace Hypertable {
 
   /// Block compressor that uses the LZO algorithm.
   /// This class provides a way to compress and decompress blocks of data using
-  /// the Lempel–Ziv–Oberhumer (<i>lzo</i>) algorithm, a general purpose,
+  /// the Lempel–Ziv–Oberhumer (lzo) algorithm, a general purpose,
   /// dictionary-based compression algorithm that focuses on decompression
   /// speed.
   class BlockCompressionCodecLzo : public BlockCompressionCodec {
@@ -44,8 +44,11 @@ namespace Hypertable {
   public:
 
     /// Constructor.
-    /// Calls lzo_init() and allocates and initializes #m_workmem.
+    /// Calls lzo_init(), allocates and initializes #m_workmem, and passes
+    /// <code>args</code> to the default implementation
+    /// of set_args() since it does not support any arguments.
     /// @param args Arguments to control compression behavior (unused)
+    /// @throws Exception Code set to Error::BLOCK_COMPRESSOR_INVALID_ARG
     BlockCompressionCodecLzo(const Args &args);
 
     /// Destructor.
@@ -76,7 +79,7 @@ namespace Hypertable {
                          BlockHeader &header, size_t reserve=0);
 
     /// Decompresses a buffer compressed with the LZO algorithm.
-    /// @see deflate() for description of input buffer format
+    /// @see deflate() for description of input buffer %format
     /// @param intput Input buffer
     /// @param output Output buffer
     /// @param header Block header

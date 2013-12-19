@@ -42,8 +42,11 @@ namespace Hypertable {
   public:
 
     /// Constructor.
-    /// @param args Arguments to control compression behavior (unused)
-    BlockCompressionCodecNone(const Args &args);
+    /// This constructor passes <code>args</code> to the default implementation
+    /// of set_args() since it does not support any arguments.
+    /// @param args Arguments to control compression behavior
+    /// @throws Exception Code set to Error::BLOCK_COMPRESSOR_INVALID_ARG
+    BlockCompressionCodecNone(const Args &args)  { set_args(args); }
 
     /// Transforms a buffer into a serialized block using no compression.
     /// This method reserves enough space in <code>output</code> to hold the
@@ -68,7 +71,7 @@ namespace Hypertable {
                          BlockHeader &header, size_t reserve=0);
 
     /// Deserializes a block produced by deflate().
-    /// @see deflate() for description of input buffer format
+    /// @see deflate() for description of input buffer %format
     /// @param intput Input buffer
     /// @param output Output buffer
     /// @param header Block header

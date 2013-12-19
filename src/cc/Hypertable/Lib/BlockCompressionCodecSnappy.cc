@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,36 +19,20 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+/// @file
+/// Definitions for BlockCompressionCodecSnappy.
+/// This file contains definitions for BlockCompressionCodecSnappy, a class
+/// for compressing blocks using the SNAPPY compression algorithm.
 
-#include "Common/DynamicBuffer.h"
-#include "Common/Logger.h"
-#include "Common/Checksum.h"
+#include <Common/Compat.h>
 
 #include "BlockCompressionCodecSnappy.h"
 
+#include <Common/DynamicBuffer.h>
+#include <Common/Logger.h>
+#include <Common/Checksum.h>
+
 using namespace Hypertable;
-
-
-BlockCompressionCodecSnappy::BlockCompressionCodecSnappy(const Args &args) {
-  if (!args.empty())
-    set_args(args);
-}
-
-
-BlockCompressionCodecSnappy::~BlockCompressionCodecSnappy() {
-}
-
-
-void BlockCompressionCodecSnappy::set_args(const Args &args) {
-  Args::const_iterator it = args.begin(), arg_end = args.end();
-
-  for (; it != arg_end; ++it) {
-    HT_THROWF(Error::BLOCK_COMPRESSOR_INVALID_ARG, "Unrecognized argument "
-              "to Snappy codec: '%s'", (*it).c_str());
-  }
-}
-
 
 void
 BlockCompressionCodecSnappy::deflate(const DynamicBuffer &input,

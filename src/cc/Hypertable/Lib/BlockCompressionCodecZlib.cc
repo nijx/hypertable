@@ -19,40 +19,30 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-
-#include "Common/DynamicBuffer.h"
-#include "Common/Logger.h"
-#include "Common/Checksum.h"
+#include <Common/Compat.h>
 
 #include "BlockCompressionCodecZlib.h"
+
+#include <Common/DynamicBuffer.h>
+#include <Common/Logger.h>
+#include <Common/Checksum.h>
 
 using namespace Hypertable;
 
 
-/**
- *
- */
 BlockCompressionCodecZlib::BlockCompressionCodecZlib(const Args &args)
   : m_inflate_initialized(false), m_deflate_initialized(false),
     m_level(Z_BEST_SPEED) {
-  if (!args.empty())
-    set_args(args);
+  set_args(args);
 }
 
 
-
-/**
- *
- */
 BlockCompressionCodecZlib::~BlockCompressionCodecZlib() {
   if (m_deflate_initialized)
     deflateEnd(&m_stream_deflate);
   if (m_inflate_initialized)
     inflateEnd(&m_stream_inflate);
 }
-
-
 
 void BlockCompressionCodecZlib::set_args(const Args &args) {
   Args::const_iterator it = args.begin(), arg_end = args.end();
@@ -79,11 +69,6 @@ void BlockCompressionCodecZlib::set_args(const Args &args) {
   }
 }
 
-
-
-/**
- *
- */
 void
 BlockCompressionCodecZlib::deflate(const DynamicBuffer &input,
     DynamicBuffer &output, BlockHeader &header, size_t reserve) {

@@ -27,6 +27,7 @@
 #ifndef HYPERTABLE_BLOCKCOMPRESSIONCODEC_H
 #define HYPERTABLE_BLOCKCOMPRESSIONCODEC_H
 
+#include <Common/Error.h>
 #include <Common/ReferenceCount.h>
 #include <Common/String.h>
 
@@ -83,9 +84,17 @@ namespace Hypertable {
     virtual void inflate(const DynamicBuffer &input, DynamicBuffer &output,
                          BlockHeader &header) = 0;
 
-    /// Sets arguments to control compression behavior
+    /// Sets arguments to control compression behavior.
+    /// This method provides a default implementation for derived classes and
+    /// simply throws an exception for each argument
     /// @param args Compressor specific arguments
-    virtual void set_args(const Args &args) {}
+    /// @throws Exception Code set to Error::BLOCK_COMPRESSOR_INVALID_ARG
+    virtual void set_args(const Args &args) {
+      foreach_ht (const String &arg, args)
+        HT_THROWF(Error::BLOCK_COMPRESSOR_INVALID_ARG, "Unrecognized argument "
+                  "to %s codec: '%s'", get_compressor_name(get_type()),
+                  arg.c_str());
+    }
 
     /// Returns compression type enum.
     /// Returns the enum value that represents the compressoion type

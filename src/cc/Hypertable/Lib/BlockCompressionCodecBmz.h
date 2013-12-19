@@ -84,7 +84,7 @@ namespace Hypertable {
                          BlockHeader &header, size_t reserve=0);
 
     /// Decompresses a buffer compressed with the BMZ algorithm.
-    /// @see deflate() for description of input buffer format
+    /// @see deflate() for description of input buffer %format
     /// @param intput Input buffer
     /// @param output Output buffer
     /// @param header Block header
