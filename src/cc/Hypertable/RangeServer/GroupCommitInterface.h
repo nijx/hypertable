@@ -21,9 +21,8 @@
 
 /// @file
 /// Declarations for GroupCommitInterface.
-/// This file contains declarations for GroupCommitInterface, an interface class
-/// that is part of  the group commit mechanism to allow mutual referencing
-/// between the RangeServer and the group commit implementation.
+/// This file contains declarations for GroupCommitInterface, a class that
+/// defines the interface to the group commit mechanism.
 
 #ifndef HYPERSPACE_GROUPCOMMITINTERFACE_H
 #define HYPERSPACE_GROUPCOMMITINTERFACE_H
@@ -157,11 +156,24 @@ namespace Hypertable {
     String error_msg;
   };
 
+  /// Abstract base class for group commit implementation.
+  /// <i>Group commit</i> is a feature whereby updates are queued over some
+  /// period of time (usually measured in milliseconds) and then written and
+  /// sync'ed to the commit log and processed in one group.  This improves
+  /// efficiency for situations where there are many concurrent updates
+  /// because otherwise the writing and sync'ing of the commit log can become
+  /// a bottleneck.  This class acts as an interface class to the group
+  /// commit implementation and provides a way for the group commit system
+  /// and the RangeServer to reference one another.
   class GroupCommitInterface : public ReferenceCount {
   public:
+
+    /// Adds a batch of updates to the group commit queue.
     virtual void add(EventPtr &event, uint64_t cluster_id, SchemaPtr &schema,
                      const TableIdentifier *table, uint32_t count,
                      StaticBuffer &buffer, uint32_t flags) = 0;
+
+    /// Processes queued updates that are ready to be committed.
     virtual void trigger() = 0;
   };
 

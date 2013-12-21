@@ -19,11 +19,17 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "Common/md5.h"
+/// @file
+/// Definitions for PhantomRange.
+/// This file contains definitions for PhantomRange, a class representing a
+/// "phantom" range (i.e. one that is being recovered by a RangeServer).
 
-#include "Global.h"
+#include <Common/Compat.h>
 #include "PhantomRange.h"
+
+#include <Hypertable/RangeServer/Global.h>
+
+#include <Common/md5.h>
 
 #include <sstream>
 

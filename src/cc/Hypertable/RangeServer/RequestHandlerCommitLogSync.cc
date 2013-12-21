@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -19,23 +19,21 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "Common/Error.h"
-#include "Common/Logger.h"
-
-#include "AsyncComm/ResponseCallback.h"
-#include "Common/Serialization.h"
-
-#include "Hypertable/Lib/Types.h"
-
-#include "RangeServer.h"
+#include <Common/Compat.h>
 #include "RequestHandlerCommitLogSync.h"
+
+#include <Hypertable/RangeServer/RangeServer.h>
+
+#include <Hypertable/Lib/Types.h>
+
+#include <AsyncComm/ResponseCallback.h>
+
+#include <Common/Serialization.h>
+#include <Common/Error.h>
+#include <Common/Logger.h>
 
 using namespace Hypertable;
 
-/**
- *
- */
 void RequestHandlerCommitLogSync::run() {
   ResponseCallback cb(m_comm, m_event);
   TableIdentifier table;

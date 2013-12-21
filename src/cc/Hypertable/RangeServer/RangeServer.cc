@@ -19,29 +19,54 @@
  * 02110-1301, USA.
  */
 
-/** @file
- * Definitions for RangeServer.
- * This file contains method and type definitions for the RangeServer
- */
+/// @file
+/// Definitions for RangeServer.
+/// This file contains method and type definitions for the RangeServer
 
+#include <Common/Compat.h>
+#include "RangeServer.h"
 
-#include "Common/Compat.h"
-#include <algorithm>
-#include <cassert>
-#include <cstdio>
-#include <cstring>
-#include <iostream>
-#include <fstream>
-#include <sstream>
+#include <Hypertable/RangeServer/FillScanBlock.h>
+#include <Hypertable/RangeServer/Global.h>
+#include <Hypertable/RangeServer/GroupCommit.h>
+#include <Hypertable/RangeServer/HandlerFactory.h>
+#include <Hypertable/RangeServer/LocationInitializer.h>
+#include <Hypertable/RangeServer/MaintenanceQueue.h>
+#include <Hypertable/RangeServer/MaintenanceScheduler.h>
+#include <Hypertable/RangeServer/MaintenanceTaskCompaction.h>
+#include <Hypertable/RangeServer/MaintenanceTaskRelinquish.h>
+#include <Hypertable/RangeServer/MaintenanceTaskSplit.h>
+#include <Hypertable/RangeServer/MergeScanner.h>
+#include <Hypertable/RangeServer/MergeScannerRange.h>
+#include <Hypertable/RangeServer/MetaLogDefinitionRangeServer.h>
+#include <Hypertable/RangeServer/MetaLogEntityRange.h>
+#include <Hypertable/RangeServer/MetaLogEntityRemoveOkLogs.h>
+#include <Hypertable/RangeServer/MetaLogEntityTask.h>
+#include <Hypertable/RangeServer/ReplayBuffer.h>
+#include <Hypertable/RangeServer/ScanContext.h>
+#include <Hypertable/RangeServer/TableSchemaCache.h>
+#include <Hypertable/RangeServer/UpdateThread.h>
 
-#include <boost/algorithm/string.hpp>
+#include <Hypertable/Lib/ClusterId.h>
+#include <Hypertable/Lib/CommitLog.h>
+#include <Hypertable/Lib/Key.h>
+#include <Hypertable/Lib/MetaLogDefinition.h>
+#include <Hypertable/Lib/MetaLogReader.h>
+#include <Hypertable/Lib/MetaLogWriter.h>
+#include <Hypertable/Lib/PseudoTables.h>
+#include <Hypertable/Lib/RangeServerProtocol.h>
+#include <Hypertable/Lib/RangeRecoveryReceiverPlan.h>
 
-extern "C" {
-#include <fcntl.h>
-#include <math.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-}
+#include <DfsBroker/Lib/Client.h>
+
+#include <Common/FailureInducer.h>
+#include <Common/FileUtils.h>
+#include <Common/HashMap.h>
+#include <Common/md5.h>
+#include <Common/Random.h>
+#include <Common/StringExt.h>
+#include <Common/SystemInfo.h>
+#include <Common/ScopeGuard.h>
 
 #if defined(TCMALLOC)
 #include <google/tcmalloc.h>
@@ -50,48 +75,22 @@ extern "C" {
 #include <google/malloc_extension.h>
 #endif
 
-#include "Common/FailureInducer.h"
-#include "Common/FileUtils.h"
-#include "Common/HashMap.h"
-#include "Common/md5.h"
-#include "Common/Random.h"
-#include "Common/StringExt.h"
-#include "Common/SystemInfo.h"
-#include "Common/ScopeGuard.h"
+#include <boost/algorithm/string.hpp>
 
-#include "Hypertable/Lib/ClusterId.h"
-#include "Hypertable/Lib/CommitLog.h"
-#include "Hypertable/Lib/Key.h"
-#include "Hypertable/Lib/MetaLogDefinition.h"
-#include "Hypertable/Lib/MetaLogReader.h"
-#include "Hypertable/Lib/MetaLogWriter.h"
-#include "Hypertable/Lib/PseudoTables.h"
-#include "Hypertable/Lib/RangeServerProtocol.h"
-#include "Hypertable/Lib/RangeRecoveryReceiverPlan.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
-#include "DfsBroker/Lib/Client.h"
-
-#include "FillScanBlock.h"
-#include "Global.h"
-#include "GroupCommit.h"
-#include "HandlerFactory.h"
-#include "LocationInitializer.h"
-#include "MaintenanceQueue.h"
-#include "MaintenanceScheduler.h"
-#include "MaintenanceTaskCompaction.h"
-#include "MaintenanceTaskSplit.h"
-#include "MaintenanceTaskRelinquish.h"
-#include "MergeScanner.h"
-#include "MergeScannerRange.h"
-#include "MetaLogEntityRange.h"
-#include "MetaLogEntityRemoveOkLogs.h"
-#include "MetaLogEntityTask.h"
-#include "RangeServer.h"
-#include "ScanContext.h"
-#include "UpdateThread.h"
-#include "ReplayBuffer.h"
-#include "MetaLogDefinitionRangeServer.h"
-#include "TableSchemaCache.h"
+extern "C" {
+#include <fcntl.h>
+#include <math.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+}
 
 using namespace std;
 using namespace Hypertable;

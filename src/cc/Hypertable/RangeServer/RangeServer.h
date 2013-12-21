@@ -19,31 +19,12 @@
  * 02110-1301, USA.
  */
 
-/** @file
- * Declarations for RangeServer.
- * This file contains the type declarations for the RangeServer
- */
+/// @file
+/// Declarations for RangeServer.
+/// This file contains the type declarations for the RangeServer
 
 #ifndef HYPERTABLE_RANGESERVER_H
 #define HYPERTABLE_RANGESERVER_H
-
-#include <Common/Logger.h>
-#include <Common/Properties.h>
-#include <Common/HashMap.h>
-
-#include <AsyncComm/ApplicationQueue.h>
-#include <AsyncComm/Comm.h>
-#include <AsyncComm/Event.h>
-#include <AsyncComm/ResponseCallback.h>
-
-#include <Hyperspace/Session.h>
-
-#include <Hypertable/Lib/Cells.h>
-#include <Hypertable/Lib/MasterClient.h>
-#include <Hypertable/Lib/RangeState.h>
-#include <Hypertable/Lib/Types.h>
-#include <Hypertable/Lib/NameIdMapper.h>
-#include <Hypertable/Lib/StatsRangeServer.h>
 
 #include <Hypertable/RangeServer/Global.h>
 #include <Hypertable/RangeServer/GroupCommitInterface.h>
@@ -64,23 +45,41 @@
 #include <Hypertable/RangeServer/PhantomRangeMap.h>
 #include <Hypertable/RangeServer/ServerState.h>
 
+#include <Hypertable/Lib/Cells.h>
+#include <Hypertable/Lib/MasterClient.h>
+#include <Hypertable/Lib/RangeState.h>
+#include <Hypertable/Lib/Types.h>
+#include <Hypertable/Lib/NameIdMapper.h>
+#include <Hypertable/Lib/StatsRangeServer.h>
+
+#include <Hyperspace/Session.h>
+
+#include <AsyncComm/ApplicationQueue.h>
+#include <AsyncComm/Comm.h>
+#include <AsyncComm/Event.h>
+#include <AsyncComm/ResponseCallback.h>
+
+#include <Common/Logger.h>
+#include <Common/Properties.h>
+#include <Common/HashMap.h>
+
 #include <boost/thread/condition.hpp>
 
 #include <map>
 
 namespace Hypertable {
+
   using namespace Hyperspace;
 
   class ConnectionHandler;
   class TableUpdate;
   class UpdateThread;
 
-  /** @defgroup RangeServer RangeServer
-   * @ingroup Hypertable
-   * %Range server.
-   * The @ref RangeServer module contains the definition of the RangeServer
-   * @{
-   */
+  /// @defgroup RangeServer RangeServer
+  /// @ingroup Hypertable
+  /// %Range server.
+  /// The @ref RangeServer module contains the definition of the RangeServer
+  /// @{
 
   class RangeServer : public ReferenceCount {
   public:
@@ -353,7 +352,9 @@ namespace Hypertable {
 
   /// Smart pointer to RangeServer
   typedef intrusive_ptr<RangeServer> RangeServerPtr;
-  /** @}*/
+
+  /// @}
+
 } // namespace Hypertable
 
 #endif // HYPERTABLE_RANGESERVER_H
