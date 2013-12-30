@@ -1253,6 +1253,9 @@ void Range::split_compact_and_shrink() {
 
   mutator->flush();
 
+  HT_INFOF("issue1159: start_row=%s, split_row=%s, end_row=%s",
+           start_row.c_str(), split_row.c_str(), end_row.c_str());
+
   /**
    *  Shrink the range
    */

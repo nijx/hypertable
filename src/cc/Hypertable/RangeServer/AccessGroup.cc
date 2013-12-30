@@ -915,8 +915,12 @@ AccessGroup::shrink(String &split_row, bool drop_high, Hints *hints) {
       ScopedLock lock(m_outstanding_scanner_mutex);
       // Shrink without having to re-create CellStores
       if (m_outstanding_scanner_count == 0) {
-        for (size_t i=0; i<m_stores.size(); i++)
+        for (size_t i=0; i<m_stores.size(); i++) {
           m_stores[i].cs->rescope(m_start_row, m_end_row);
+          HT_INFOF("issue1159: rescope %s start=%s end=%s",
+                   m_stores[i].cs->get_filename().c_str(),
+                   m_start_row.c_str(), m_end_row.c_str());
+        }
         cellstores_shrunk = true;
       }
     }
@@ -928,6 +932,8 @@ AccessGroup::shrink(String &split_row, bool drop_high, Hints *hints) {
         new_cell_store = CellStoreFactory::open(filename, m_start_row.c_str(),
                                                 m_end_row.c_str());
         new_stores.push_back( new_cell_store );
+        HT_INFOF("issue1159: reopen %s start=%s end=%s",
+                 filename.c_str(), m_start_row.c_str(), m_end_row.c_str());
       }
       m_stores = new_stores;
     }
