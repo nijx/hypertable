@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,22 +19,27 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for GroupCommitInterface.
+/// This file contains declarations for GroupCommitInterface, a class that
+/// defines the interface to the group commit mechanism.
+
 #ifndef HYPERSPACE_GROUPCOMMITINTERFACE_H
 #define HYPERSPACE_GROUPCOMMITINTERFACE_H
 
+#include <Hypertable/RangeServer/Range.h>
+#include <Hypertable/RangeServer/TableInfo.h>
+
+#include <Hypertable/Lib/CommitLog.h>
+#include <Hypertable/Lib/Schema.h>
+#include <Hypertable/Lib/Types.h>
+
+#include <AsyncComm/Event.h>
+
+#include <Common/ReferenceCount.h>
+#include <Common/StaticBuffer.h>
+
 #include <vector>
-
-#include "Common/ReferenceCount.h"
-#include "Common/StaticBuffer.h"
-
-#include "AsyncComm/Event.h"
-
-#include "Hypertable/Lib/CommitLog.h"
-#include "Hypertable/Lib/Schema.h"
-#include "Hypertable/Lib/Types.h"
-
-#include "Range.h"
-#include "TableInfo.h"
 
 /** GNU C++ extensions. */
 namespace __gnu_cxx {
@@ -47,20 +52,35 @@ namespace __gnu_cxx {
 
 namespace Hypertable {
 
+  /// @addtogroup RangeServer
+  /// @{
+
+  /// Describes portion of an update buffer rejected due to error.
   struct SendBackRec {
+    /// Error code
     int error;
+    /// Number of key/value pairs to which #error applies
     uint32_t count;
-    uint32_t offset;
+    /// Starting byte offset within update buffer of rejected key/value pairs
+    uint32_t offset; 
+    /// Length (in bytes) from #offset covering key/value pairs rejected
     uint32_t len;
   };
 
-  class UpdateRequest {
+  /// Holds client update request and error state.
+  class ClientUpdateRequest {
   public:
-    UpdateRequest() : count(0), error(0) { }
+    /// Default constructor.
+    ClientUpdateRequest() : count(0), error(0) { }
+    /// Update buffer containing serialized key/value pairs
     StaticBuffer buffer;
+    /// Count of serialized key/value pairs in #buffer
     uint32_t count;
+    /// Event object of originating update requst
     EventPtr event;
+    /// Vector of SendBacRec objects describing rejected key/value pairs
     std::vector<SendBackRec> send_back_vector;
+    /// Error code that applies to entire buffer
     uint32_t error;
   };
 
@@ -75,14 +95,14 @@ namespace Hypertable {
   public:
     RangeUpdateList() : starting_update_count(0), last_request(0), transfer_buf_reset_offset(0),
                         latest_transfer_revision(TIMESTAMP_MIN), range_blocked(false) { }
-    void reset_updates(UpdateRequest *request) {
+    void reset_updates(ClientUpdateRequest *request) {
       if (request == last_request) {
         if (starting_update_count < updates.size())
           updates.resize(starting_update_count);
         transfer_buf.ptr = transfer_buf.base + transfer_buf_reset_offset;
       }
     }
-    void add_update(UpdateRequest *request, RangeUpdate &update) {
+    void add_update(ClientUpdateRequest *request, RangeUpdate &update) {
       if (request != last_request) {
         starting_update_count = updates.size();
         last_request = request;
@@ -94,7 +114,7 @@ namespace Hypertable {
     RangePtr range;
     std::vector<RangeUpdate> updates;
     size_t starting_update_count;
-    UpdateRequest *last_request;
+    ClientUpdateRequest *last_request;
     DynamicBuffer transfer_buf;
     uint32_t transfer_buf_reset_offset;
     int64_t latest_transfer_revision;
@@ -109,13 +129,15 @@ namespace Hypertable {
                     wait_for_system_recovery(false), sync(false),
                     transfer_count(0), total_added(0), error(0) {}
     ~TableUpdate() {
-      foreach_ht (UpdateRequest *r, requests)
+      foreach_ht (ClientUpdateRequest *r, requests)
         delete r;
       for (hash_map<Range *, RangeUpdateList *>::iterator iter = range_map.begin(); iter != range_map.end(); ++iter)
         delete (*iter).second;
     }
+    /// Cluster from which these updates originated
+    uint64_t cluster_id;
     TableIdentifier id;
-    std::vector<UpdateRequest *> requests;
+    std::vector<ClientUpdateRequest *> requests;
     uint32_t flags;
     uint32_t commit_interval;
     uint32_t commit_iteration;
@@ -134,13 +156,31 @@ namespace Hypertable {
     String error_msg;
   };
 
+  /// Abstract base class for group commit implementation.
+  /// <i>Group commit</i> is a feature whereby updates are queued over some
+  /// period of time (usually measured in milliseconds) and then written and
+  /// sync'ed to the commit log and processed in one group.  This improves
+  /// efficiency for situations where there are many concurrent updates
+  /// because otherwise the writing and sync'ing of the commit log can become
+  /// a bottleneck.  This class acts as an interface class to the group
+  /// commit implementation and provides a way for the group commit system
+  /// and the RangeServer to reference one another.
   class GroupCommitInterface : public ReferenceCount {
   public:
-    virtual void add(EventPtr &event, SchemaPtr &schema, const TableIdentifier *table,
-                     uint32_t count, StaticBuffer &buffer, uint32_t flags) = 0;
+
+    /// Adds a batch of updates to the group commit queue.
+    virtual void add(EventPtr &event, uint64_t cluster_id, SchemaPtr &schema,
+                     const TableIdentifier *table, uint32_t count,
+                     StaticBuffer &buffer, uint32_t flags) = 0;
+
+    /// Processes queued updates that are ready to be committed.
     virtual void trigger() = 0;
   };
+
+  /// Smart pointer to GroupCommitInterface
   typedef boost::intrusive_ptr<GroupCommitInterface> GroupCommitInterfacePtr;
+
+  /// @}
 }
 
 #endif // HYPERSPACE_GROUPCOMMITINTERFACE_H
