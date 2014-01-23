@@ -127,6 +127,7 @@ namespace Hypertable {
 
     void incr_generation() { m_generation++; }
     void set_generation(const char *generation);
+    void set_version(const char *version_str);
     void set_max_column_family_id(const char *generation);
     uint32_t get_generation() const { return m_generation; }
 
@@ -191,12 +192,13 @@ namespace Hypertable {
     typedef hash_map<uint32_t, ColumnFamily *> ColumnFamilyIdMap;
 
     String m_error_string;
-    int    m_next_column_id;
+    int m_next_column_id;
     AccessGroupMap m_access_group_map;
     ColumnFamilies m_column_families; // preserve order
     ColumnFamilyMap m_column_family_map;
     ColumnFamilyIdMap m_column_family_id_map;
     uint32_t m_generation;
+    uint32_t m_version;
     AccessGroups   m_access_groups;
     AccessGroup   *m_open_access_group;
     ColumnFamily  *m_open_column_family;
