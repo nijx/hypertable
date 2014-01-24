@@ -158,12 +158,16 @@ enum ColumnPredicateOperation {
  *
  *   <dt>value_len</dt>
  *   <dd>The size of the value</dd>
+*    
+ *   <dt>column_qualifier</dt>
+ *   <dd>The column qualifier</dd>
  * </dl>
  */
 struct ColumnPredicate {
   1: optional string column_family
   2: ColumnPredicateOperation operation
   3: optional string value
+  4: optional string column_qualifier
 }
 
 /** Specifies options for a scan

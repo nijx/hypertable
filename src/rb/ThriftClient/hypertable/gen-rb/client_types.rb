@@ -118,33 +118,38 @@ module Hypertable
         end
 
         # Specifies a column predicate
-        #     ... WHERE column = "value"
-        #   or
-        #     ... WHERE column =^ "prefix"
-        # 
-        # <dl>
-        #   <dt>column_family</dt>
-        #   <dd>The name of the column family</dd>
-        # 
-        #   <dt>operation</dt>
-        #   <dd>The predicate operation; either EXACT_MATCH or PREFIX_MATCH</dd>
-        # 
-        #   <dt>value</dt>
-        #   <dd>The cell value or cell prefix, depending on the operation</dd>
-        # 
-        #   <dt>value_len</dt>
-        #   <dd>The size of the value</dd>
-        # </dl>
+        #  *     ... WHERE column = "value"
+        #  *   or
+        #  *     ... WHERE column =^ "prefix"
+        #  *
+        #  * <dl>
+        #  *   <dt>column_family</dt>
+        #  *   <dd>The name of the column family</dd>
+        #  *
+        #  *   <dt>operation</dt>
+        #  *   <dd>The predicate operation; either EXACT_MATCH or PREFIX_MATCH</dd>
+        #  *
+        #  *   <dt>value</dt>
+        #  *   <dd>The cell value or cell prefix, depending on the operation</dd>
+        #  *
+        #  *   <dt>value_len</dt>
+        #  *   <dd>The size of the value</dd>
+        # *
+        #  *   <dt>column_qualifier</dt>
+        #  *   <dd>The column qualifier</dd>
+        #  * </dl>
         class ColumnPredicate
           include ::Thrift::Struct, ::Thrift::Struct_Union
           COLUMN_FAMILY = 1
           OPERATION = 2
           VALUE = 3
+          COLUMN_QUALIFIER = 4
 
           FIELDS = {
             COLUMN_FAMILY => {:type => ::Thrift::Types::STRING, :name => 'column_family', :optional => true},
             OPERATION => {:type => ::Thrift::Types::I32, :name => 'operation', :enum_class => Hypertable::ThriftGen::ColumnPredicateOperation},
-            VALUE => {:type => ::Thrift::Types::STRING, :name => 'value', :optional => true}
+            VALUE => {:type => ::Thrift::Types::STRING, :name => 'value', :optional => true},
+            COLUMN_QUALIFIER => {:type => ::Thrift::Types::STRING, :name => 'column_qualifier', :optional => true}
           }
 
           def struct_fields; FIELDS; end

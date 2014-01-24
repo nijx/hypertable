@@ -44,13 +44,13 @@ public:
     CONTAINS
   };
 
-  ColumnPredicate() : column_family(0), operation(0),
+  ColumnPredicate() : column_family(0), column_qualifier(0), operation(0),
     value(0), value_len(0) { }
 
-  ColumnPredicate(const char *_column_family, uint32_t _operation,
-          const char *_value, uint32_t _value_len = 0)
-    : column_family(_column_family), operation(_operation),
-       value(_value), value_len(_value_len) {
+  ColumnPredicate(const char *_column_family, const char *_column_qualifier,
+                 uint32_t _operation, const char *_value, uint32_t _value_len=0)
+    : column_family(_column_family), column_qualifier(_column_qualifier),
+      operation(_operation), value(_value), value_len(_value_len) {
     if (!value_len && value)
       value_len = strlen(value);
   }
@@ -64,6 +64,7 @@ public:
   void decode(const uint8_t **bufp, size_t *remainp);
 
   const char *column_family;
+  const char *column_qualifier;
   uint32_t operation;
   const char *value;
   uint32_t value_len;
@@ -327,9 +328,11 @@ public:
   }
 
   void add_column_predicate(CharArena &arena, const char *column_family,
-          uint32_t operation, const char *value, uint32_t value_len = 0) {
+                            const char *column_qualifier, uint32_t operation,
+                            const char *value, uint32_t value_len = 0) {
     ColumnPredicate cp;
     cp.column_family = arena.dup(column_family);
+    cp.column_qualifier = arena.dup(column_qualifier);
     cp.operation = operation;
     if (value) {
       cp.value = arena.dup(value);
@@ -472,10 +475,12 @@ public:
    * @param value_len the length of the value, in bytes. If 0 then 
    *    the length will automatically be assigned using strlen(value)
    */
-  void add_column_predicate(const char *column_family, uint32_t operation, 
-          const char *value, uint32_t value_len = 0) {
-    m_scan_spec.add_column_predicate(m_arena, column_family, operation, 
-            value, value_len);
+  void
+  add_column_predicate(const char *column_family, const char *column_qualifier,
+                       uint32_t operation,  const char *value,
+                       uint32_t value_len = 0) {
+    m_scan_spec.add_column_predicate(m_arena, column_family, column_qualifier,
+                                     operation, value, value_len);
   }
 
   /**

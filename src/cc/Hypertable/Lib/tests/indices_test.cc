@@ -195,7 +195,7 @@ test_escaped_regexps(void)
   FILE *fout=fopen("indices_test.output", "wt");
   foreach_ht (Query &q, queries) {
     ScanSpecBuilder ssb;
-    ssb.add_column_predicate("a", q.second, q.first);
+    ssb.add_column_predicate("a", "", q.second, q.first);
     String s=escape(q.first, strlen(q.first));
     //String s(q.first);
     fprintf(fout, "query: '%s'\n", s.c_str());

@@ -91,7 +91,7 @@ void IntervalScannerAsync::init(const ScanSpec &scan_spec) {
 
   foreach_ht (const ColumnPredicate &cp, scan_spec.column_predicates)
     m_scan_spec_builder.add_column_predicate(cp.column_family,
-            cp.operation, cp.value, cp.value_len);
+            cp.column_qualifier, cp.operation, cp.value, cp.value_len);
 
   for (size_t i=0; i<scan_spec.columns.size(); i++) {
     ScanSpec::parse_column(scan_spec.columns[i], family, qualifier, 

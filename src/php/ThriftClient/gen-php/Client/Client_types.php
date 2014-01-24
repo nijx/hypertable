@@ -369,6 +369,7 @@ class Hypertable_ThriftGen_ColumnPredicate {
   public $column_family = null;
   public $operation = null;
   public $value = null;
+  public $column_qualifier = null;
 
   public function __construct($vals=null) {
     if (!isset(self::$_TSPEC)) {
@@ -385,6 +386,10 @@ class Hypertable_ThriftGen_ColumnPredicate {
           'var' => 'value',
           'type' => TType::STRING,
           ),
+        4 => array(
+          'var' => 'column_qualifier',
+          'type' => TType::STRING,
+          ),
         );
     }
     if (is_array($vals)) {
@@ -396,6 +401,9 @@ class Hypertable_ThriftGen_ColumnPredicate {
       }
       if (isset($vals['value'])) {
         $this->value = $vals['value'];
+      }
+      if (isset($vals['column_qualifier'])) {
+        $this->column_qualifier = $vals['column_qualifier'];
       }
     }
   }
@@ -440,6 +448,13 @@ class Hypertable_ThriftGen_ColumnPredicate {
             $xfer += $input->skip($ftype);
           }
           break;
+        case 4:
+          if ($ftype == TType::STRING) {
+            $xfer += $input->readString($this->column_qualifier);
+          } else {
+            $xfer += $input->skip($ftype);
+          }
+          break;
         default:
           $xfer += $input->skip($ftype);
           break;
@@ -466,6 +481,11 @@ class Hypertable_ThriftGen_ColumnPredicate {
     if ($this->value !== null) {
       $xfer += $output->writeFieldBegin('value', TType::STRING, 3);
       $xfer += $output->writeString($this->value);
+      $xfer += $output->writeFieldEnd();
+    }
+    if ($this->column_qualifier !== null) {
+      $xfer += $output->writeFieldBegin('column_qualifier', TType::STRING, 4);
+      $xfer += $output->writeString($this->column_qualifier);
       $xfer += $output->writeFieldEnd();
     }
     $xfer += $output->writeFieldStop();

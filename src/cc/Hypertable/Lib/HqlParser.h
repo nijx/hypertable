@@ -341,6 +341,7 @@ namespace Hypertable {
       String current_rename_column_old_name;
       String current_column_family;
       String current_column_predicate_name;
+      String current_column_predicate_qualifier;
       char field_separator;
 
       void validate_function(const String &s) {
@@ -894,6 +895,15 @@ namespace Hypertable {
        ParserState &state;
     };
 
+    struct scan_set_column_predicate_qualifier {
+      scan_set_column_predicate_qualifier(ParserState &state) : state(state) { }
+      void operator()(char const *str, char const *end) const {
+        state.current_column_predicate_qualifier =
+          create_string_without_quotes(str, end-str);
+       }
+       ParserState &state;
+    };
+
     struct scan_set_column_predicate_value {
       scan_set_column_predicate_value(ParserState &state, uint32_t operation) 
           : state(state), operation(operation) { }
@@ -901,7 +911,8 @@ namespace Hypertable {
         String s(str, end-str);
         trim_if(s, boost::is_any_of("'\""));
         state.scan.builder.add_column_predicate(state.current_column_predicate_name.c_str(),
-                    operation, s.c_str());
+                                                state.current_column_predicate_qualifier.c_str(),
+                                                operation, s.c_str());
        }
        ParserState &state;
        uint32_t operation;
@@ -2738,13 +2749,15 @@ namespace Hypertable {
             ;
 
           column_predicate
-            = identifier[scan_set_column_predicate_name(self.state)] 
-                >> '=' 
-                >> string_literal[scan_set_column_predicate_value(self.state, 
-                        ColumnPredicate::EXACT_MATCH)]
+            = identifier[scan_set_column_predicate_name(self.state)]
+            >> !(COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)])
+            >> '=' 
+            >> string_literal[scan_set_column_predicate_value(self.state, 
+                                           ColumnPredicate::EXACT_MATCH)]
             | identifier[scan_set_column_predicate_name(self.state)] 
-                >> SW
-                >> string_literal[scan_set_column_predicate_value(self.state, 
+            >> !(COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)])
+            >> SW
+            >> string_literal[scan_set_column_predicate_value(self.state, 
                         ColumnPredicate::PREFIX_MATCH)]
             ;
 

@@ -37,12 +37,14 @@ using namespace Serialization;
 
 size_t ColumnPredicate::encoded_length() const {
   return sizeof(uint32_t)
-          + encoded_length_vstr(column_family) 
+          + encoded_length_vstr(column_family)
+          + encoded_length_vstr(column_qualifier)
           + encoded_length_vstr(value_len);
 }
 
 void ColumnPredicate::encode(uint8_t **bufp) const {
   encode_vstr(bufp, column_family);
+  encode_vstr(bufp, column_qualifier);
   encode_i32(bufp, operation);
   encode_vstr(bufp, value, value_len);
 }
@@ -50,6 +52,7 @@ void ColumnPredicate::encode(uint8_t **bufp) const {
 void ColumnPredicate::decode(const uint8_t **bufp, size_t *remainp) {
   HT_TRY("decoding column predicate",
     column_family = decode_vstr(bufp, remainp);
+    column_qualifier = decode_vstr(bufp, remainp);
     operation = decode_i32(bufp, remainp);
     value = decode_vstr(bufp, remainp, &value_len));
 }
@@ -303,7 +306,8 @@ ScanSpec::ScanSpec(CharArena &arena, const ScanSpec &ss)
                       ci.end_row, ci.end_column, ci.end_inclusive);
 
   foreach_ht(const ColumnPredicate &cp, ss.column_predicates)
-    add_column_predicate(arena, cp.column_family, cp.operation, cp.value);
+    add_column_predicate(arena, cp.column_family, cp.column_qualifier,
+                         cp.operation, cp.value);
 }
 
 void ScanSpec::parse_column(const char *column_str, String &family, 
