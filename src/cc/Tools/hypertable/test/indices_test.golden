@@ -246,8 +246,8 @@ row2	b	cell2
 row3	c	cell3
 row4	d	cell4
 SELECT * FROM "^t";
-1,cell1\trow1	v1	
-2,cell2\trow2	v1	
+1,cell1\t\trow1	v1	
+2,cell2\t\trow2	v1	
 INSERT INTO t VALUES ("row1", "a", "cell1");
 INSERT INTO t VALUES ("row2", "b", "cell2");
 INSERT INTO t VALUES ("row3", "c", "cell3");
@@ -262,10 +262,10 @@ row3	c	cell3
 row4	d	cell4
 row4	d	cell4
 SELECT * FROM "^t";
-1,cell1\trow1	v1	
-1,cell1\trow1	v1	
-2,cell2\trow2	v1	
-2,cell2\trow2	v1	
+1,cell1\t\trow1	v1	
+1,cell1\t\trow1	v1	
+2,cell2\t\trow2	v1	
+2,cell2\t\trow2	v1	
 INSERT INTO t VALUES ("row11", "a", "cell11");
 INSERT INTO t VALUES ("row12", "b", "cell12");
 INSERT INTO t VALUES ("row13", "c", "cell13");
@@ -284,12 +284,12 @@ row3	c	cell3
 row4	d	cell4
 row4	d	cell4
 SELECT * FROM "^t";
-1,cell1\trow1	v1	
-1,cell1\trow1	v1	
-1,cell11\trow11	v1	
-2,cell12\trow12	v1	
-2,cell2\trow2	v1	
-2,cell2\trow2	v1	
+1,cell1\t\trow1	v1	
+1,cell1\t\trow1	v1	
+1,cell11\t\trow11	v1	
+2,cell12\t\trow12	v1	
+2,cell2\t\trow2	v1	
+2,cell2\t\trow2	v1	
 INSERT INTO t VALUES ("row15", "a", "cell15");
 INSERT INTO t VALUES ("row16", "b", "cell16");
 INSERT INTO t VALUES ("row17", "c", "cell17");
@@ -312,14 +312,14 @@ row3	c	cell3
 row4	d	cell4
 row4	d	cell4
 SELECT * FROM "^t";
-1,cell1\trow1	v1	
-1,cell1\trow1	v1	
-1,cell11\trow11	v1	
-1,cell15\trow15	v1	
-2,cell12\trow12	v1	
-2,cell16\trow16	v1	
-2,cell2\trow2	v1	
-2,cell2\trow2	v1	
+1,cell1\t\trow1	v1	
+1,cell1\t\trow1	v1	
+1,cell11\t\trow11	v1	
+1,cell15\t\trow15	v1	
+2,cell12\t\trow12	v1	
+2,cell16\t\trow16	v1	
+2,cell2\t\trow2	v1	
+2,cell2\t\trow2	v1	
 INSERT INTO t VALUES ("row\t25", "a", "cell\t25");
 INSERT INTO t VALUES ("row\t26", "b", "cell\t26");
 INSERT INTO t VALUES ("row\t27", "c", "cell\t27");
@@ -346,16 +346,16 @@ row\\t26	b	cell\\t26
 row\\t27	c	cell\\t27
 row\\t28	d	cell\\t28
 SELECT * FROM "^t";
-1,cell1\trow1	v1	
-1,cell1\trow1	v1	
-1,cell11\trow11	v1	
-1,cell15\trow15	v1	
-1,cell\\\\t25\trow\\\\t25	v1	
-2,cell12\trow12	v1	
-2,cell16\trow16	v1	
-2,cell2\trow2	v1	
-2,cell2\trow2	v1	
-2,cell\\\\t26\trow\\\\t26	v1	
+1,cell1\t\trow1	v1	
+1,cell1\t\trow1	v1	
+1,cell11\t\trow11	v1	
+1,cell15\t\trow15	v1	
+1,cell\\\\t25\t\trow\\\\t25	v1	
+2,cell12\t\trow12	v1	
+2,cell16\t\trow16	v1	
+2,cell2\t\trow2	v1	
+2,cell2\t\trow2	v1	
+2,cell\\\\t26\t\trow\\\\t26	v1	
 
 DROP TABLE t;
 CREATE TABLE t(a, INDEX a);
@@ -1242,12 +1242,12 @@ rowb0	b	cellb0:
 rowb1	b:foo	cellb0:foo
 rowb2	b:bar	cellb0:bar
 SELECT * FROM "^t";
-1,cella0:\trowa0	v1	
-1,cella0:bar\trowa2	v1	
-1,cella0:foo\trowa1	v1	
-2,cellb0:\trowb0	v1	
-2,cellb0:bar\trowb2	v1	
-2,cellb0:foo\trowb1	v1	
+1,cella0:\t\trowa0	v1	
+1,cella0:bar\tbar\trowa2	v1	
+1,cella0:foo\tfoo\trowa1	v1	
+2,cellb0:\t\trowb0	v1	
+2,cellb0:bar\tbar\trowb2	v1	
+2,cellb0:foo\tfoo\trowb1	v1	
 SELECT * FROM "^^t";
 1,\trowa0	v1	
 1,bar\trowa2	v1	
