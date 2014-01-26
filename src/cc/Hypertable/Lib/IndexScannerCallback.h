@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -22,11 +22,6 @@
 #ifndef HYPERTABLE_INDEXSCANNERCALLBACK_H
 #define HYPERTABLE_INDEXSCANNERCALLBACK_H
 
-#include <vector>
-#include <deque>
-#include <map>
-#include <boost/thread/condition.hpp>
-
 #include "Common/Filesystem.h"
 #include "HyperAppHelper/Unique.h"
 #include "ResultCallback.h"
@@ -35,10 +30,33 @@
 #include "Namespace.h"
 #include "Client.h"
 
+#include <boost/thread/condition.hpp>
+
+#include <algorithm>
+#include <deque>
+#include <map>
+#include <vector>
+
 // this macro enables the "ScanSpecBuilder queue" test code; it fills the queue
 // till it exceeds the limit, and makes sure that the queue is blocking
 // till it gets empty again
 #undef TEST_SSB_QUEUE
+
+namespace {
+  struct QualifierFilterMatch :
+    std::unary_function<std::pair<String, String>, bool> {
+    QualifierFilterMatch(const char *row) : row(row) { }
+    bool operator()(const std::pair<String, String> &filter) const {
+      if (!strncmp(filter.first.c_str(), row, filter.first.length())) {
+        if (filter.second.empty() ||
+            strstr(row+filter.first.length(), filter.second.c_str()))
+          return true;
+      }
+      return false;
+    }
+    const char *row;
+  };
+}
 
 namespace Hypertable {
 
@@ -79,11 +97,12 @@ static String last;
   public:
 
     IndexScannerCallback(TablePtr primary_table, const ScanSpec &primary_spec, 
-            ResultCallback *original_cb, uint32_t timeout_ms, 
-            bool qualifier_scan)
+                         std::vector<std::pair<String, String> > qualifier_filters,
+                         ResultCallback *original_cb, uint32_t timeout_ms, 
+                         bool qualifier_scan)
       : ResultCallback(), m_primary_table(primary_table), 
-        m_primary_spec(primary_spec), m_original_cb(original_cb), 
-        m_timeout_ms(timeout_ms), m_mutator(0), 
+        m_primary_spec(primary_spec), m_qualifier_filters(qualifier_filters),
+        m_original_cb(original_cb), m_timeout_ms(timeout_ms), m_mutator(0), 
         m_row_limit(0), m_cell_limit(0), m_cell_count(0), m_row_offset(0), 
         m_cell_offset(0), m_row_count(0), m_cell_limit_per_family(0), 
         m_eos(false), m_limits_reached(false), m_readahead_count(0), 
@@ -267,6 +286,14 @@ static String last;
       scancells->get(cells);
       foreach_ht (Cell &cell, cells) {
         char *r = (char *)cell.row_key;
+
+        // Do qualifier match
+        if (!m_qualifier_filters.empty()) {
+          if (find_if(m_qualifier_filters.begin(), m_qualifier_filters.end(),
+                      QualifierFilterMatch(r)) == m_qualifier_filters.end())
+            continue;
+        }
+
         char *p = r + strlen(r);
         while (*p != '\t' && p > (char *)cell.row_key)
           p--;
@@ -719,6 +746,9 @@ static String last;
 
     // the original scan spec for the primary table
     ScanSpecBuilder m_primary_spec;
+
+    // Vectory of first-pass qualifier filters
+    std::vector<std::pair<String, String> > m_qualifier_filters;
 
     // the original callback object specified by the user
     ResultCallback *m_original_cb;

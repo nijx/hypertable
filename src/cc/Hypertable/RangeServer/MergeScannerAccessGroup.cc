@@ -220,7 +220,9 @@ MergeScannerAccessGroup::do_initialize()
       if (cfi.has_column_predicate_filter()) {
         const uint8_t *dptr;
         if (!cfi.column_predicate_matches(sstate.value.str(),
-                sstate.value.decode_length(&dptr))) {
+                                          sstate.value.decode_length(&dptr))
+            || !cfi.qualifier_matches(sstate.key.column_qualifier, 
+                                      sstate.key.column_qualifier_len)) {
           m_queue.pop();
           sstate.scanner->forward();
           if (sstate.scanner->get(sstate.key, sstate.value))

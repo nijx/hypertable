@@ -588,3 +588,28 @@ SELECT age FROM User WHERE name="Doug";
 SELECT * FROM User WHERE name="Doug" AND age="45";
 SELECT address FROM User WHERE name="Doug" AND TIMESTAMP < "2014-01-17 03:41:30";
 SELECT address FROM User WHERE name="Doug" AND TIMESTAMP > "2014-01-17 03:41:30";
+
+# Index tests with qualifier
+DROP TABLE IF EXISTS User;
+CREATE TABLE User (age, infoA, infoB, index infoA);
+INSERT INTO User VALUES
+('2014-01-17 03:41:29', '123456789', 'infoA:first', 'Bobby'),
+('2014-01-17 03:41:29', '123456789', 'infoA:last', 'Jones'),
+('2014-01-17 03:41:29', '123456789', 'age', '45'),
+('2014-01-17 03:41:30', '234567890', 'infoA:first', 'Ricky'),
+('2014-01-17 03:41:30', '234567890', 'infoA:last', 'Bobby'),
+('2014-01-17 03:41:30', '234567890', 'age', '57'),
+('2014-01-17 03:41:31', '345678901', 'infoB:first', 'Ricky'),
+('2014-01-17 03:41:31', '345678901', 'infoB:last', 'Bobby'),
+('2014-01-17 03:41:31', '345678901', 'infoB:child', 'Ronnie'),
+('2014-01-17 03:41:31', '345678901', 'age', '83'),
+('2014-01-17 03:41:29', '345678902', 'infoA:first', 'Boris'),
+('2014-01-17 03:41:29', '345678902', 'infoA:last', 'Yeltsin'),
+('2014-01-17 03:41:31', '345678902', 'infoB:child', 'Roland'),
+('2014-01-17 03:41:31', '345678902', 'infoB:brother', 'Roland'),
+('2014-01-17 03:41:29', '345678902', 'age', '78');
+SELECT age FROM User WHERE infoA:last="Bobby";
+SELECT * FROM User WHERE infoA:first = 'Bobby';
+SELECT * FROM User WHERE infoA:first =^ 'Bo';
+SELECT * FROM User WHERE infoB:child = 'Ronnie';
+SELECT * FROM User WHERE infoB:child =^ 'Ro';

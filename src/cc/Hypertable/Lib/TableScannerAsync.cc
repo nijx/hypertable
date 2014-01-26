@@ -19,16 +19,15 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include <vector>
-
-#include "Common/Error.h"
-#include "Common/String.h"
-
-#include "Table.h"
+#include <Common/Compat.h>
 #include "TableScannerAsync.h"
-#include "IndexScannerCallback.h"
-#include "LoadDataEscape.h"
+
+#include <Hypertable/Lib/Table.h>
+#include <Hypertable/Lib/IndexScannerCallback.h>
+#include <Hypertable/Lib/LoadDataEscape.h>
+
+#include <Common/Error.h>
+#include <Common/String.h>
 
 extern "C" {
 #include <poll.h>
@@ -52,12 +51,14 @@ TableScannerAsync::TableScannerAsync(Comm *comm,
   ScanSpecBuilder index_spec;
   const ScanSpec *first_pass_spec;
   bool use_qualifier = false;
+  std::vector<std::pair<String, String> > qualifier_filters;
 
   HT_ASSERT(timeout_ms);
 
   // can we optimize this query with an index?
   if (!(flags & Table::SCANNER_FLAG_IGNORE_INDEX)
-      && use_index(table, scan_spec, index_spec, &use_qualifier)) {
+      && use_index(table, scan_spec, index_spec,
+                   qualifier_filters, &use_qualifier)) {
 
     first_pass_spec = &index_spec.get();
 
@@ -65,8 +66,8 @@ TableScannerAsync::TableScannerAsync(Comm *comm,
 
     // create a ResultCallback object which will load the keys from
     // the index, then sort and verify them
-    cb = new IndexScannerCallback(table, primary_spec.get(), cb, timeout_ms, 
-                                  use_qualifier);
+    cb = new IndexScannerCallback(table, primary_spec.get(), qualifier_filters,
+                                  cb, timeout_ms, use_qualifier);
 
     // get the index table
     if (use_qualifier)
@@ -90,7 +91,9 @@ TableScannerAsync::TableScannerAsync(Comm *comm,
 }
 
 bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec, 
-                ScanSpecBuilder &index_spec, bool *use_qualifier)
+                                  ScanSpecBuilder &index_spec,
+                                  std::vector<std::pair<String, String> > &post_filter,
+                                  bool *use_qualifier)
 {
   HT_ASSERT(!table->schema()->need_id_assignment());
 
@@ -153,6 +156,10 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
 
   // for value prefix queries we require normal indicies for ALL scanned columns
   if (!primary_spec.column_predicates.empty()) {
+    std::pair<String, String> filter;
+    bool encountered_qualifier = false;
+
+    post_filter.reserve(primary_spec.column_predicates.size());
 
     foreach_ht (const ColumnPredicate &cp, primary_spec.column_predicates) {
       Schema::ColumnFamily *cf=table->schema()->get_column_family(
@@ -166,7 +173,9 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
 
       // every \t in the original value gets escaped
       const char *value;
+      const char *escaped_qualifier;
       size_t valuelen;
+      size_t escaped_qualifier_len;
       LoadDataEscape lde;
       lde.escape(cp.value, cp.value_len, &value, &valuelen);
 
@@ -175,15 +184,41 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
       StaticBuffer sb(valuelen + 5);
       char *p = (char *)sb.base;
       sprintf(p, "%d,", (int)cf->id);
-      p     += strlen(p);
+      p += strlen(p);
       memcpy(p, value, valuelen);
-      p     += valuelen;
-      if (cp.operation == ColumnPredicate::EXACT_MATCH)
+      p += valuelen;
+
+      if (cp.column_qualifier && *cp.column_qualifier) {
+        encountered_qualifier = true;
+        lde.escape(cp.column_qualifier, strlen(cp.column_qualifier),
+                     &escaped_qualifier, &escaped_qualifier_len);
+      }
+      else {
+        escaped_qualifier = "";
+        escaped_qualifier_len = 0;
+      }
+
+      if (cp.operation == ColumnPredicate::EXACT_MATCH) {
         *p++  = '\t';
+        filter.first = String((const char *)sb.base, p-(char *)sb.base) + 
+          String(escaped_qualifier, escaped_qualifier_len) + "\t";
+        filter.second.clear();
+      }
+      else {
+        filter.first = String((const char *)sb.base, p-(char *)sb.base);
+        filter.second = String("\t") + String(escaped_qualifier, escaped_qualifier_len) + "\t";
+      }
       *p++  = '\0';
+
+      post_filter.push_back(filter);
 
       add_index_row(index_spec, (const char *)sb.base);
     }
+
+    // If no qualifiers were encountered in any of the column predicates,
+    // don't bother checking
+    if (!encountered_qualifier)
+      post_filter.clear();
 
     *use_qualifier = false;
     return true;

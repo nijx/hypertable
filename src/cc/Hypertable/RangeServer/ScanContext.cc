@@ -439,6 +439,11 @@ ScanContext::initialize(int64_t rev, const ScanSpec *ss,
           HT_THROW(Error::BAD_SCAN_SPEC, "Counters are not supported for column predicates" );
         }
         family_info[cf->id].add_column_predicate(cp);
+        if (cp.column_qualifier && *cp.column_qualifier) {
+          family_info[cf->id].add_qualifier(cp.column_qualifier, false,
+                          cp.operation == ColumnPredicate::PREFIX_MATCH);
+          family_info[cf->id].accept_empty_qualifier = false;
+        }
       }
     }
   }
