@@ -495,7 +495,6 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
   bool minor = false;
   bool merging = false;
   bool major = false;
-  bool gc = false;
   bool cellstore_created = false;
   size_t merge_offset=0, merge_length=0;
   String added_file;
@@ -533,7 +532,7 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
           merge_caches();
       }
       else if (MaintenanceFlag::gc_compaction(maintenance_flags)) {
-        gc = true;
+        major = true;
         HT_INFOF("Starting GC Compaction of %s", m_full_name.c_str());
       }
       else {
@@ -572,10 +571,9 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
 
       /**
        * Check for garbage and if threshold reached, change minor to major
-       * compaction.  If GC compaction was requested and garbage threshold
-       * is not reached, skip compaction.
+       * compaction.
        */
-      if (gc || (minor && m_garbage_tracker.check_needed(m_cell_cache_manager->immutable_memory_used()))) {
+      if (minor && m_garbage_tracker.check_needed(m_cell_cache_manager->immutable_memory_used())) {
         uint64_t total_bytes, valid_bytes;
         compute_garbage_stats(&total_bytes, &valid_bytes);
         m_garbage_tracker.set_garbage_stats(total_bytes, valid_bytes);
@@ -585,15 +583,6 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
                      ((double)(total_bytes-valid_bytes)/(double)total_bytes)*100.00);
           major = true;
           minor = false;
-        }
-        else if (gc) {
-          HT_INFOF("Aborting GC compaction because measured garbage of %.2f%% is below threshold",
-                   ((double)(total_bytes-valid_bytes)/(double)total_bytes)*100.00);
-          HT_INFOF("GC total_bytes=%lld, valid_bytes=%lld", (Lld)total_bytes, (Lld)valid_bytes);
-          merge_caches();
-          hints->latest_stored_revision = m_latest_stored_revision;
-          hints->disk_usage = m_disk_usage;
-          return;
         }
       }
 
