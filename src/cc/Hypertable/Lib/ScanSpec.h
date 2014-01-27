@@ -41,7 +41,8 @@ public:
     NO_OPERATION = 0,
     EXACT_MATCH,
     PREFIX_MATCH,
-    CONTAINS
+    QUALIFIER_EXACT_MATCH,
+    QUALIFIER_PREFIX_MATCH
   };
 
   ColumnPredicate() : column_family(0), column_qualifier(0), operation(0),

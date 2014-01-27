@@ -155,17 +155,6 @@ namespace Hypertable {
                       memcmp(cp.value, value, cp.value_len) == 0)
                 return true;
               break;
-            case Hypertable::ColumnPredicate::CONTAINS:
-              if (cp.value_len <= value_len) {
-                while (search_buf_column_predicates.size() < column_predicates.size()) {
-                  search_buf_column_predicates.push_back(search_buf_t());
-                }
-                search_buf_t& buf = search_buf_column_predicates[ncp];
-                if (memfind((const uint8_t*)value, value_len, (const uint8_t*)cp.value,
-                      cp.value_len, buf.shift, &buf.repeat) != 0)
-                  return true;
-              }
-              break;
             default:
               break;
           }

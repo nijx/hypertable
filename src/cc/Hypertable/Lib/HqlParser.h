@@ -278,7 +278,7 @@ namespace Hypertable {
                       delete_time(0), delete_version_time(0),
                       if_exists(false), tables_only(false), with_ids(false),
                       replay(false), scanner_id(-1), row_uniquify_chars(0),
-                      escape(true), nokeys(false), field_separator(0) {
+        escape(true), nokeys(false), field_separator(0) {
         memset(&tmval, 0, sizeof(tmval));
       }
       int command;
@@ -913,6 +913,18 @@ namespace Hypertable {
         state.scan.builder.add_column_predicate(state.current_column_predicate_name.c_str(),
                                                 state.current_column_predicate_qualifier.c_str(),
                                                 operation, s.c_str());
+       }
+       ParserState &state;
+       uint32_t operation;
+    };
+
+    struct scan_set_column_predicate_operation {
+      scan_set_column_predicate_operation(ParserState &state, uint32_t operation) 
+          : state(state), operation(operation) { }
+      void operator()(char c) const {
+        state.scan.builder.add_column_predicate(state.current_column_predicate_name.c_str(),
+                                                state.current_column_predicate_qualifier.c_str(),
+                                                operation, "");
        }
        ParserState &state;
        uint32_t operation;
@@ -2751,14 +2763,18 @@ namespace Hypertable {
           column_predicate
             = identifier[scan_set_column_predicate_name(self.state)]
             >> !(COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)])
-            >> '=' 
-            >> string_literal[scan_set_column_predicate_value(self.state, 
-                                           ColumnPredicate::EXACT_MATCH)]
+            >> '='
+            >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::EXACT_MATCH)]
             | identifier[scan_set_column_predicate_name(self.state)] 
             >> !(COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)])
             >> SW
-            >> string_literal[scan_set_column_predicate_value(self.state, 
-                        ColumnPredicate::PREFIX_MATCH)]
+            >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::PREFIX_MATCH)]
+            | EXISTS >> LPAREN
+            >> identifier[scan_set_column_predicate_name(self.state)]
+            >> COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)]
+            >> (RPAREN[scan_set_column_predicate_operation(self.state, ColumnPredicate::QUALIFIER_EXACT_MATCH)]
+                |
+                '*' >> RPAREN[scan_set_column_predicate_operation(self.state, ColumnPredicate::QUALIFIER_PREFIX_MATCH)])
             ;
 
           where_predicate
