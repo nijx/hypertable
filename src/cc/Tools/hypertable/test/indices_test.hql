@@ -533,15 +533,15 @@ SELECT a:q012 FROM t;
 SELECT a:^q012 FROM t;
 SELECT a:^"^" FROM t;
 
-SELECT * FROM t WHERE a = "cella0";
-SELECT b FROM t WHERE a = "cella0";
-SELECT a FROM t WHERE a = "cella0";
-SELECT a FROM t WHERE a = "cella11";
-SELECT a FROM t WHERE a = "cell";
-SELECT a FROM t WHERE a =^ "cell";
-SELECT a FROM t WHERE a =^ "c";
-SELECT a FROM t WHERE a =^ "";
-SELECT a FROM t WHERE a =^ "xas";
+SELECT * FROM t WHERE a:* = "cella0";
+SELECT b FROM t WHERE a:* = "cella0";
+SELECT a FROM t WHERE a:* = "cella0";
+SELECT a FROM t WHERE a:* = "cella11";
+SELECT a FROM t WHERE a:* = "cell";
+SELECT a FROM t WHERE a:* =^ "cell";
+SELECT a FROM t WHERE a:* =^ "c";
+SELECT a FROM t WHERE a:* =^ "";
+SELECT a FROM t WHERE a:* =^ "xas";
 
 # drop one index and make sure that the queries still work
 # TODO re-enable this when ALTER TABLE is implemented

@@ -39,21 +39,28 @@ class ColumnPredicate {
 public:
   enum {
     NO_OPERATION = 0,
-    EXACT_MATCH,
-    PREFIX_MATCH,
-    QUALIFIER_EXACT_MATCH,
-    QUALIFIER_PREFIX_MATCH
+    EXACT_MATCH  = 0x0001,
+    PREFIX_MATCH = 0x0002,
+    REGEX_MATCH  = 0x0004,
+    VALUE_MATCH  = 0x0007,
+    QUALIFIER_EXACT_MATCH  = 0x0100,
+    QUALIFIER_PREFIX_MATCH = 0x0200,
+    QUALIFIER_REGEX_MATCH  = 0x0400,
+    QUALIFIER_MATCH        = 0x0700
   };
 
-  ColumnPredicate() : column_family(0), column_qualifier(0), operation(0),
-    value(0), value_len(0) { }
+  ColumnPredicate() : 
+    column_family(0), column_qualifier(0), value(0), column_qualifier_len(0),
+    value_len(0), operation(0) { }
 
   ColumnPredicate(const char *_column_family, const char *_column_qualifier,
                  uint32_t _operation, const char *_value, uint32_t _value_len=0)
     : column_family(_column_family), column_qualifier(_column_qualifier),
-      operation(_operation), value(_value), value_len(_value_len) {
+      value(_value), column_qualifier_len(0), value_len(_value_len),
+      operation(_operation) {
     if (!value_len && value)
       value_len = strlen(value);
+    column_qualifier_len = strlen(column_qualifier);
   }
 
   ColumnPredicate(const uint8_t **bufp, size_t *remainp) {
@@ -66,9 +73,10 @@ public:
 
   const char *column_family;
   const char *column_qualifier;
-  uint32_t operation;
   const char *value;
+  uint32_t column_qualifier_len;
   uint32_t value_len;
+  uint32_t operation;
 };
 
 /**
@@ -250,19 +258,19 @@ public:
 
   /**
    * Parses a column string into column family, qualifier and whether the
-   * qualifier is a regexp or not
-   *
+   * qualifier is a regexp or not.
    * @param column_str column specified string
    * @param family family name
-   * @param qualifier column qualifier
+   * @param qualifier Address of qualifier return pointer
+   * @param qualifier_len Address of qualifier return length
    * @param has_qualifier Output parameter set if column_str has qualifer
    * @param is_regexp true if the qualifier string is a regexp
    * @param is_prefix true if the qualifier string is a prefix search
-   *
    */
   static void parse_column(const char *column_str, String &family, 
-                String &qualifier, bool *has_qualifier, bool *is_regexp, 
-                bool *is_prefix);
+                           const char **qualifier, size_t *qualifier_len,
+                           bool *has_qualifier, bool *is_regexp,
+                           bool *is_prefix);
 
   void add_row(CharArena &arena, const char *str) {
     if (cell_intervals.size())
@@ -334,6 +342,7 @@ public:
     ColumnPredicate cp;
     cp.column_family = arena.dup(column_family);
     cp.column_qualifier = arena.dup(column_qualifier);
+    cp.column_qualifier_len = strlen(column_qualifier);
     cp.operation = operation;
     if (value) {
       cp.value = arena.dup(value);

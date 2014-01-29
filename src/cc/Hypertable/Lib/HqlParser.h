@@ -1,4 +1,4 @@
-/*
+/* -*- c++ -*-
  * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -34,10 +34,10 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
-#include <boost/spirit/include/classic_core.hpp>
-#include <boost/spirit/include/classic_symbols.hpp>
 #include <boost/spirit/include/classic_confix.hpp>
+#include <boost/spirit/include/classic_core.hpp>
 #include <boost/spirit/include/classic_escape_char.hpp>
+#include <boost/spirit/include/classic_symbols.hpp>
 
 #include <cstdlib>
 #include <fstream>
@@ -278,7 +278,8 @@ namespace Hypertable {
                       delete_time(0), delete_version_time(0),
                       if_exists(false), tables_only(false), with_ids(false),
                       replay(false), scanner_id(-1), row_uniquify_chars(0),
-        escape(true), nokeys(false), field_separator(0) {
+        escape(true), nokeys(false), 
+        current_column_predicate_operation(0), field_separator(0) {
         memset(&tmval, 0, sizeof(tmval));
       }
       int command;
@@ -342,6 +343,7 @@ namespace Hypertable {
       String current_column_family;
       String current_column_predicate_name;
       String current_column_predicate_qualifier;
+      uint32_t current_column_predicate_operation;
       char field_separator;
 
       void validate_function(const String &s) {
@@ -378,8 +380,8 @@ namespace Hypertable {
     /// @param str Pointer to c-style string
     /// @param len Length of string
     /// @return String with outer quotes stripped off
-    inline String create_string_without_quotes(const char *str, size_t len) {
-      if (len > 1 && (*str == '\'' || *str == '"') && *str == *(str+len-1))
+    inline String strip_literal_enclosure(const char *str, size_t len) {
+      if (len > 1 && (*str == '\'' || *str == '"' || *str == '/') && *str == *(str+len-1))
         return String(str+1, len-2);
       return String(str, len);
     }
@@ -451,7 +453,7 @@ namespace Hypertable {
     struct set_range_start_row {
       set_range_start_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.range_start_row = create_string_without_quotes(str, end-str);
+        state.range_start_row = strip_literal_enclosure(str, end-str);
       }
       ParserState &state;
     };
@@ -459,7 +461,7 @@ namespace Hypertable {
     struct set_range_end_row {
       set_range_end_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.range_end_row = create_string_without_quotes(str, end-str);
+        state.range_end_row = strip_literal_enclosure(str, end-str);
       }
       ParserState &state;
     };
@@ -888,34 +890,42 @@ namespace Hypertable {
     struct scan_set_column_predicate_name {
       scan_set_column_predicate_name(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        String s(str, end-str);
-        trim_if(s, boost::is_any_of("'\""));
-        state.current_column_predicate_name = s;
+        state.current_column_predicate_name = String(str, end-str);
        }
        ParserState &state;
     };
 
     struct scan_set_column_predicate_qualifier {
-      scan_set_column_predicate_qualifier(ParserState &state) : state(state) { }
+      scan_set_column_predicate_qualifier(ParserState &state, uint32_t operation)
+        : state(state), operation(operation) { }
       void operator()(char const *str, char const *end) const {
+        state.current_column_predicate_operation |= operation;
         state.current_column_predicate_qualifier =
-          create_string_without_quotes(str, end-str);
-       }
-       ParserState &state;
+          strip_literal_enclosure(str, end-str);
+      }
+      void operator()(char c) const {
+        HT_ASSERT(c == '*');
+        state.current_column_predicate_operation |= 
+          ColumnPredicate::QUALIFIER_PREFIX_MATCH;
+        state.current_column_predicate_qualifier.clear();
+      }
+      ParserState &state;
+      uint32_t operation;
     };
 
     struct scan_set_column_predicate_value {
       scan_set_column_predicate_value(ParserState &state, uint32_t operation) 
-          : state(state), operation(operation) { }
+        : state(state), operation(operation) { }
       void operator()(char const *str, char const *end) const {
-        String s(str, end-str);
-        trim_if(s, boost::is_any_of("'\""));
+        String s = strip_literal_enclosure(str, end-str);
+        state.current_column_predicate_operation |= operation;
         state.scan.builder.add_column_predicate(state.current_column_predicate_name.c_str(),
                                                 state.current_column_predicate_qualifier.c_str(),
-                                                operation, s.c_str());
-       }
-       ParserState &state;
-       uint32_t operation;
+                                                state.current_column_predicate_operation,
+                                                s.c_str());
+      }
+      ParserState &state;
+      uint32_t operation;
     };
 
     struct scan_set_column_predicate_operation {
@@ -1139,7 +1149,7 @@ namespace Hypertable {
     };
 
     struct scan_add_column_family {
-      scan_add_column_family(ParserState &state, int qualifier_flag) : state(state),
+      scan_add_column_family(ParserState &state, int qualifier_flag=0) : state(state),
           qualifier_flag(qualifier_flag) { }
       void operator()(char const *str, char const *end) const {
         String column_name(str, end-str);
@@ -1154,7 +1164,7 @@ namespace Hypertable {
     };
 
     struct scan_add_column_qualifier {
-      scan_add_column_qualifier(ParserState &state, int _qualifier_flag) 
+      scan_add_column_qualifier(ParserState &state, int _qualifier_flag=0)
           : state(state), qualifier_flag(_qualifier_flag) { }
       void operator()(char const *str, char const *end) const {
         String qualifier(str, end-str);
@@ -1163,6 +1173,11 @@ namespace Hypertable {
                 ? ":^"
                 : ":")
             + qualifier;
+        state.scan.builder.add_column(qualified_column.c_str());
+      }
+      void operator()(const char c) const {
+        HT_ASSERT(c == '*');
+        String qualified_column = state.current_column_family + ":*";
         state.scan.builder.add_column(qualified_column.c_str());
       }
       ParserState &state;
@@ -1201,7 +1216,7 @@ namespace Hypertable {
     struct scan_set_cell_row {
       scan_set_cell_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.scan.current_cell_row = create_string_without_quotes(str,end-str);
+        state.scan.current_cell_row = strip_literal_enclosure(str,end-str);
       }
       ParserState &state;
     };
@@ -1270,7 +1285,7 @@ namespace Hypertable {
     struct scan_set_row {
       scan_set_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.scan.current_rowkey = create_string_without_quotes(str, end-str);
+        state.scan.current_rowkey = strip_literal_enclosure(str, end-str);
         if (state.scan.current_relop != 0) {
           switch (state.scan.current_relop) {
           case RELOP_EQ:
@@ -1727,7 +1742,7 @@ namespace Hypertable {
       set_insert_rowkey(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
         state.current_insert_value.row_key  =
-          create_string_without_quotes(str, end-str);
+          strip_literal_enclosure(str, end-str);
       }
       ParserState &state;
     };
@@ -1812,7 +1827,7 @@ namespace Hypertable {
     struct delete_set_row {
       delete_set_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.delete_row = create_string_without_quotes(str, end-str);
+        state.delete_row = strip_literal_enclosure(str, end-str);
       }
       ParserState &state;
     };
@@ -1975,6 +1990,7 @@ namespace Hypertable {
           strlit<>    GE(">=");
           chlit<>     GT('>');
           strlit<>    SW("=^");
+          strlit<>    RE("=~");
           strlit<>    QUALPREFIX(":^");
           chlit<>     LPAREN('(');
           chlit<>     RPAREN(')');
@@ -2176,6 +2192,11 @@ namespace Hypertable {
           user_identifier
             = identifier
             | string_literal
+            ;
+
+          string_literal
+            = single_string_literal
+            | double_string_literal
             ;
 
           table_identifier
@@ -2692,20 +2713,19 @@ namespace Hypertable {
             ;
 
           column_selection
-            = (identifier[scan_add_column_family(self.state, 
-                        EXACT_QUALIFIER)] >> QUALPREFIX >>
+            = (identifier[scan_add_column_family(self.state)] >> QUALPREFIX >>
                         user_identifier[scan_add_column_qualifier(self.state, 
                             PREFIX_QUALIFIER)])
-            | (identifier[scan_add_column_family(self.state, 
-                        EXACT_QUALIFIER)] >> COLON >>
-                        user_identifier[scan_add_column_qualifier(self.state, 
-                            EXACT_QUALIFIER)])
-            | (identifier[scan_add_column_family(self.state, 
-                        REGEXP_QUALIFIER)] >> COLON >>
-                        regexp_literal[scan_add_column_qualifier(self.state, 
-                            REGEXP_QUALIFIER)])
-            | (identifier[scan_add_column_family(self.state, 
-                        NO_QUALIFIER)])
+            | (identifier[scan_add_column_family(self.state)]
+               >> COLON
+               >> user_identifier[scan_add_column_qualifier(self.state)])
+            | (identifier[scan_add_column_family(self.state)] 
+               >> COLON
+               >> STAR[scan_add_column_qualifier(self.state)])
+            | (identifier[scan_add_column_family(self.state)] 
+               >> COLON
+               >> regexp_literal[scan_add_column_qualifier(self.state)])
+            | (identifier[scan_add_column_family(self.state, NO_QUALIFIER)])
             ;
 
           where_clause
@@ -2762,19 +2782,28 @@ namespace Hypertable {
 
           column_predicate
             = identifier[scan_set_column_predicate_name(self.state)]
-            >> !(COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)])
+            >> !column_qualifier_spec
             >> '='
             >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::EXACT_MATCH)]
             | identifier[scan_set_column_predicate_name(self.state)] 
-            >> !(COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)])
+            >> !column_qualifier_spec
             >> SW
             >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::PREFIX_MATCH)]
+            | identifier[scan_set_column_predicate_name(self.state)] 
+            >> !column_qualifier_spec
+            >> RE
+            >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::REGEX_MATCH)]
             | EXISTS >> LPAREN
             >> identifier[scan_set_column_predicate_name(self.state)]
-            >> COLON >> user_identifier[scan_set_column_predicate_qualifier(self.state)]
-            >> (RPAREN[scan_set_column_predicate_operation(self.state, ColumnPredicate::QUALIFIER_EXACT_MATCH)]
-                |
-                '*' >> RPAREN[scan_set_column_predicate_operation(self.state, ColumnPredicate::QUALIFIER_PREFIX_MATCH)])
+            >> column_qualifier_spec
+            >> RPAREN
+            ;
+
+          column_qualifier_spec
+            = COLON
+            >> (user_identifier[scan_set_column_predicate_qualifier(self.state, ColumnPredicate::QUALIFIER_EXACT_MATCH)] |
+                regexp_literal[scan_set_column_predicate_qualifier(self.state, ColumnPredicate::QUALIFIER_REGEX_MATCH)] |
+                STAR[scan_set_column_predicate_qualifier(self.state, ColumnPredicate::QUALIFIER_PREFIX_MATCH)])
             ;
 
           where_predicate
@@ -2906,6 +2935,7 @@ namespace Hypertable {
           BOOST_SPIRIT_DEBUG_RULE(column_name);
           BOOST_SPIRIT_DEBUG_RULE(column_option);
           BOOST_SPIRIT_DEBUG_RULE(column_predicate);
+          BOOST_SPIRIT_DEBUG_RULE(column_qualifier_spec);
           BOOST_SPIRIT_DEBUG_RULE(column_selection);
           BOOST_SPIRIT_DEBUG_RULE(create_definition);
           BOOST_SPIRIT_DEBUG_RULE(create_definitions);
@@ -3036,7 +3066,7 @@ namespace Hypertable {
           describe_table_statement, show_statement, select_statement,
           where_clause, where_predicate,
           time_predicate, relop, row_interval, row_predicate, column_predicate,
-          value_predicate, column_selection,
+          column_qualifier_spec, value_predicate, column_selection,
           option_spec, date_expression, unused_tokens, datetime, date, time, year,
           load_data_statement, load_data_input, load_data_option, insert_statement,
           insert_value_list, insert_value, delete_statement,

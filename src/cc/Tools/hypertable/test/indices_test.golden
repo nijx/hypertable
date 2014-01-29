@@ -1855,25 +1855,16 @@ rowa13	a:q0123	cella13
 SELECT a:^"^" FROM t;
 rowa14	a:^q0123	cella14
 
-SELECT * FROM t WHERE a = "cella0";
+SELECT * FROM t WHERE a:* = "cella0";
 rowa0	a:q0	cella0
-SELECT b FROM t WHERE a = "cella0";
+SELECT b FROM t WHERE a:* = "cella0";
 Error: Selected column b must be referenced in Column predicate - HYPERTABLE HQL parse error
-SELECT a FROM t WHERE a = "cella0";
+SELECT a FROM t WHERE a:* = "cella0";
 rowa0	a:q0	cella0
-SELECT a FROM t WHERE a = "cella11";
+SELECT a FROM t WHERE a:* = "cella11";
 rowa11	a:q01	cella11
-SELECT a FROM t WHERE a = "cell";
-SELECT a FROM t WHERE a =^ "cell";
-rowa0	a:q0	cella0
-rowa1	a:q0	cella1
-rowa10	a:q0	cella10
-rowa11	a:q01	cella11
-rowa12	a:q012	cella12
-rowa13	a:q0123	cella13
-rowa14	a:^q0123	cella14
-rowa2	a:q0	cella2
-SELECT a FROM t WHERE a =^ "c";
+SELECT a FROM t WHERE a:* = "cell";
+SELECT a FROM t WHERE a:* =^ "cell";
 rowa0	a:q0	cella0
 rowa1	a:q0	cella1
 rowa10	a:q0	cella10
@@ -1882,7 +1873,7 @@ rowa12	a:q012	cella12
 rowa13	a:q0123	cella13
 rowa14	a:^q0123	cella14
 rowa2	a:q0	cella2
-SELECT a FROM t WHERE a =^ "";
+SELECT a FROM t WHERE a:* =^ "c";
 rowa0	a:q0	cella0
 rowa1	a:q0	cella1
 rowa10	a:q0	cella10
@@ -1891,7 +1882,16 @@ rowa12	a:q012	cella12
 rowa13	a:q0123	cella13
 rowa14	a:^q0123	cella14
 rowa2	a:q0	cella2
-SELECT a FROM t WHERE a =^ "xas";
+SELECT a FROM t WHERE a:* =^ "";
+rowa0	a:q0	cella0
+rowa1	a:q0	cella1
+rowa10	a:q0	cella10
+rowa11	a:q01	cella11
+rowa12	a:q012	cella12
+rowa13	a:q0123	cella13
+rowa14	a:^q0123	cella14
+rowa2	a:q0	cella2
+SELECT a FROM t WHERE a:* =^ "xas";
 
 # drop one index and make sure that the queries still work
 # TODO re-enable this when ALTER TABLE is implemented

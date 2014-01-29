@@ -29,6 +29,8 @@
 #include <Common/Error.h>
 #include <Common/String.h>
 
+#include <cctype>
+
 extern "C" {
 #include <poll.h>
 }
@@ -88,6 +90,30 @@ TableScannerAsync::TableScannerAsync(Comm *comm,
   m_table = table;
 
   init(comm, app_queue, table, range_locator, *first_pass_spec, timeout_ms, cb);
+}
+
+namespace {
+  bool extract_prefix_from_regex(const char *input, size_t input_len,
+                                 const char **output, size_t *output_len) {
+    const char *ptr;
+    if (input_len == 0 || *input != '^')
+      return false;
+    *output = input+1;
+    for (ptr=*output; ptr<input+input_len; ptr++) {
+      if (*ptr == '.' || *ptr == '[' || *ptr == '(' || *ptr == '{' || *ptr == '\\' || *ptr == '+' || *ptr == '$') {
+        *output_len = ptr - *output;
+        return *output_len > 0;
+      }
+      else if (*ptr == '*' || *ptr == '?' || *ptr == '|') {
+        if ((ptr - *output) == 0)
+          return false;
+        *output_len = (ptr - *output) - 1;
+        return *output_len > 0;
+      }
+    }
+    *output_len = ptr - *output;
+    return *output_len > 0;
+  }
 }
 
 bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec, 
@@ -167,50 +193,58 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
       if (!cf || !cf->has_index)
         return false;
 
-      if (cp.operation != ColumnPredicate::EXACT_MATCH &&
-          cp.operation != ColumnPredicate::PREFIX_MATCH)
-        return false;
-
-      // every \t in the original value gets escaped
-      const char *value;
-      const char *escaped_qualifier;
-      size_t valuelen;
-      size_t escaped_qualifier_len;
-      LoadDataEscape lde;
-      lde.escape(cp.value, cp.value_len, &value, &valuelen);
-
-      // exact match:  create row interval ["%d,value\t", ..)
-      // prefix match: create row interval ["%d,value", ..)
-      StaticBuffer sb(valuelen + 5);
+      StaticBuffer sb((2*cp.value_len) + 5);
       char *p = (char *)sb.base;
       sprintf(p, "%d,", (int)cf->id);
       p += strlen(p);
-      memcpy(p, value, valuelen);
-      p += valuelen;
 
-      if (cp.column_qualifier && *cp.column_qualifier) {
-        encountered_qualifier = true;
-        lde.escape(cp.column_qualifier, strlen(cp.column_qualifier),
+      if (cp.operation & ColumnPredicate::REGEX_MATCH) {
+        const char *prefix;
+        size_t prefix_len;
+        if (!extract_prefix_from_regex(cp.value, cp.value_len, &prefix, &prefix_len))
+          return false;
+        memcpy(p, prefix, prefix_len);
+        p += prefix_len;
+      }
+      else if ((cp.operation & ColumnPredicate::EXACT_MATCH) ||
+               (cp.operation & ColumnPredicate::PREFIX_MATCH)) {
+
+        // every \t in the original value gets escaped
+        const char *value;
+        const char *escaped_qualifier;
+        size_t valuelen;
+        size_t escaped_qualifier_len;
+        LoadDataEscape lde;
+        lde.escape(cp.value, cp.value_len, &value, &valuelen);
+
+        // exact match:  create row interval ["%d,value\t", ..)
+        // prefix match: create row interval ["%d,value", ..)
+        memcpy(p, value, valuelen);
+        p += valuelen;
+
+        if (cp.column_qualifier && *cp.column_qualifier) {
+          encountered_qualifier = true;
+          lde.escape(cp.column_qualifier, strlen(cp.column_qualifier),
                      &escaped_qualifier, &escaped_qualifier_len);
-      }
-      else {
-        escaped_qualifier = "";
-        escaped_qualifier_len = 0;
-      }
+        }
+        else {
+          escaped_qualifier = "";
+          escaped_qualifier_len = 0;
+        }
 
-      if (cp.operation == ColumnPredicate::EXACT_MATCH) {
-        *p++  = '\t';
-        filter.first = String((const char *)sb.base, p-(char *)sb.base) + 
-          String(escaped_qualifier, escaped_qualifier_len) + "\t";
-        filter.second.clear();
+        if (cp.operation & ColumnPredicate::EXACT_MATCH) {
+          *p++  = '\t';
+          filter.first = String((const char *)sb.base, p-(char *)sb.base) + 
+            String(escaped_qualifier, escaped_qualifier_len) + "\t";
+          filter.second.clear();
+        }
+        else {
+          filter.first = String((const char *)sb.base, p-(char *)sb.base);
+          filter.second = String("\t") + String(escaped_qualifier, escaped_qualifier_len) + "\t";
+        }
+        post_filter.push_back(filter);
       }
-      else {
-        filter.first = String((const char *)sb.base, p-(char *)sb.base);
-        filter.second = String("\t") + String(escaped_qualifier, escaped_qualifier_len) + "\t";
-      }
-      *p++  = '\0';
-
-      post_filter.push_back(filter);
+      *p++ = '\0';
 
       add_index_row(index_spec, (const char *)sb.base);
     }
