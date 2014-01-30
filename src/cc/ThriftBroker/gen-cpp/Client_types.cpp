@@ -10,13 +10,25 @@ namespace Hypertable { namespace ThriftGen {
 
 int _kColumnPredicateOperationValues[] = {
   ColumnPredicateOperation::EXACT_MATCH,
-  ColumnPredicateOperation::PREFIX_MATCH
+  ColumnPredicateOperation::PREFIX_MATCH,
+  ColumnPredicateOperation::REGEX_MATCH,
+  ColumnPredicateOperation::VALUE_MATCH,
+  ColumnPredicateOperation::QUALIFIER_EXACT_MATCH,
+  ColumnPredicateOperation::QUALIFIER_PREFIX_MATCH,
+  ColumnPredicateOperation::QUALIFIER_REGEX_MATCH,
+  ColumnPredicateOperation::QUALIFIER_MATCH
 };
 const char* _kColumnPredicateOperationNames[] = {
   "EXACT_MATCH",
-  "PREFIX_MATCH"
+  "PREFIX_MATCH",
+  "REGEX_MATCH",
+  "VALUE_MATCH",
+  "QUALIFIER_EXACT_MATCH",
+  "QUALIFIER_PREFIX_MATCH",
+  "QUALIFIER_REGEX_MATCH",
+  "QUALIFIER_MATCH"
 };
-const std::map<int, const char*> _ColumnPredicateOperation_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(2, _kColumnPredicateOperationValues, _kColumnPredicateOperationNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+const std::map<int, const char*> _ColumnPredicateOperation_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(8, _kColumnPredicateOperationValues, _kColumnPredicateOperationNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 int _kKeyFlagValues[] = {
   KeyFlag::DELETE_ROW,

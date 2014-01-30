@@ -380,10 +380,24 @@ namespace Hypertable {
     /// @param str Pointer to c-style string
     /// @param len Length of string
     /// @return String with outer quotes stripped off
-    inline String strip_literal_enclosure(const char *str, size_t len) {
-      if (len > 1 && (*str == '\'' || *str == '"' || *str == '/') && *str == *(str+len-1))
+    inline String strip_quotes(const char *str, size_t len) {
+      if (len > 1 && (*str == '\'' || *str == '"') && *str == *(str+len-1))
         return String(str+1, len-2);
       return String(str, len);
+    }
+
+    inline String regex_from_literal(const char *str, size_t len) {
+      if (len > 0 && *str != '/')
+        return strip_quotes(str, len);
+      String regex = String(str+1, len-2);
+      String oldStr("\\/");
+      String newStr("/");
+      size_t pos = 0;
+      while((pos = regex.find(oldStr, pos)) != std::string::npos) {
+        regex.replace(pos, oldStr.length(), newStr);
+        pos += newStr.length();
+      }
+      return regex;
     }
 
     struct set_command {
@@ -453,7 +467,7 @@ namespace Hypertable {
     struct set_range_start_row {
       set_range_start_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.range_start_row = strip_literal_enclosure(str, end-str);
+        state.range_start_row = strip_quotes(str, end-str);
       }
       ParserState &state;
     };
@@ -461,7 +475,7 @@ namespace Hypertable {
     struct set_range_end_row {
       set_range_end_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.range_end_row = strip_literal_enclosure(str, end-str);
+        state.range_end_row = strip_quotes(str, end-str);
       }
       ParserState &state;
     };
@@ -900,8 +914,12 @@ namespace Hypertable {
         : state(state), operation(operation) { }
       void operator()(char const *str, char const *end) const {
         state.current_column_predicate_operation |= operation;
-        state.current_column_predicate_qualifier =
-          strip_literal_enclosure(str, end-str);
+        if (operation == ColumnPredicate::QUALIFIER_REGEX_MATCH)
+          state.current_column_predicate_qualifier =
+            regex_from_literal(str, end-str);
+        else
+          state.current_column_predicate_qualifier =
+            strip_quotes(str, end-str);
       }
       void operator()(char c) const {
         HT_ASSERT(c == '*');
@@ -917,7 +935,11 @@ namespace Hypertable {
       scan_set_column_predicate_value(ParserState &state, uint32_t operation=0)
         : state(state), operation(operation) { }
       void operator()(char const *str, char const *end) const {
-        String s = strip_literal_enclosure(str, end-str);
+        String s;
+        if (operation == ColumnPredicate::REGEX_MATCH)
+          s = regex_from_literal(str, end-str);
+        else
+          s = strip_quotes(str, end-str);
         state.current_column_predicate_operation |= operation;
         state.scan.builder.add_column_predicate(state.current_column_predicate_name.c_str(),
                                                 state.current_column_predicate_qualifier.c_str(),
@@ -1223,7 +1245,7 @@ namespace Hypertable {
     struct scan_set_cell_row {
       scan_set_cell_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.scan.current_cell_row = strip_literal_enclosure(str,end-str);
+        state.scan.current_cell_row = strip_quotes(str,end-str);
       }
       ParserState &state;
     };
@@ -1292,7 +1314,7 @@ namespace Hypertable {
     struct scan_set_row {
       scan_set_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.scan.current_rowkey = strip_literal_enclosure(str, end-str);
+        state.scan.current_rowkey = strip_quotes(str, end-str);
         if (state.scan.current_relop != 0) {
           switch (state.scan.current_relop) {
           case RELOP_EQ:
@@ -1749,7 +1771,7 @@ namespace Hypertable {
       set_insert_rowkey(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
         state.current_insert_value.row_key  =
-          strip_literal_enclosure(str, end-str);
+          strip_quotes(str, end-str);
       }
       ParserState &state;
     };
@@ -1834,7 +1856,7 @@ namespace Hypertable {
     struct delete_set_row {
       delete_set_row(ParserState &state) : state(state) { }
       void operator()(char const *str, char const *end) const {
-        state.delete_row = strip_literal_enclosure(str, end-str);
+        state.delete_row = strip_quotes(str, end-str);
       }
       ParserState &state;
     };
@@ -2799,7 +2821,7 @@ namespace Hypertable {
             | identifier[scan_set_column_predicate_name(self.state)] 
             >> !column_qualifier_spec
             >> RE
-            >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::REGEX_MATCH)]
+            >> regexp_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::REGEX_MATCH)]
             | REGEXP >> LPAREN
             >> identifier[scan_set_column_predicate_name(self.state)]
             >> !column_qualifier_spec

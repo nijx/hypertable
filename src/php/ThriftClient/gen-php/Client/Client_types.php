@@ -11,14 +11,32 @@ include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
 $GLOBALS['Hypertable_ThriftGen_E_ColumnPredicateOperation'] = array(
   'EXACT_MATCH' => 1,
   'PREFIX_MATCH' => 2,
+  'REGEX_MATCH' => 4,
+  'VALUE_MATCH' => 7,
+  'QUALIFIER_EXACT_MATCH' => 256,
+  'QUALIFIER_PREFIX_MATCH' => 512,
+  'QUALIFIER_REGEX_MATCH' => 1024,
+  'QUALIFIER_MATCH' => 1792,
 );
 
 final class ColumnPredicateOperation {
   const EXACT_MATCH = 1;
   const PREFIX_MATCH = 2;
+  const REGEX_MATCH = 4;
+  const VALUE_MATCH = 7;
+  const QUALIFIER_EXACT_MATCH = 256;
+  const QUALIFIER_PREFIX_MATCH = 512;
+  const QUALIFIER_REGEX_MATCH = 1024;
+  const QUALIFIER_MATCH = 1792;
   static public $__names = array(
     1 => 'EXACT_MATCH',
     2 => 'PREFIX_MATCH',
+    4 => 'REGEX_MATCH',
+    7 => 'VALUE_MATCH',
+    256 => 'QUALIFIER_EXACT_MATCH',
+    512 => 'QUALIFIER_PREFIX_MATCH',
+    1024 => 'QUALIFIER_REGEX_MATCH',
+    1792 => 'QUALIFIER_MATCH',
   );
 }
 
