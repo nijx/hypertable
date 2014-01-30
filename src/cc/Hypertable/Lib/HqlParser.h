@@ -914,7 +914,7 @@ namespace Hypertable {
     };
 
     struct scan_set_column_predicate_value {
-      scan_set_column_predicate_value(ParserState &state, uint32_t operation) 
+      scan_set_column_predicate_value(ParserState &state, uint32_t operation=0)
         : state(state), operation(operation) { }
       void operator()(char const *str, char const *end) const {
         String s = strip_literal_enclosure(str, end-str);
@@ -923,6 +923,13 @@ namespace Hypertable {
                                                 state.current_column_predicate_qualifier.c_str(),
                                                 state.current_column_predicate_operation,
                                                 s.c_str());
+      }
+      void operator()(char c) const {
+        HT_ASSERT(c == ')');
+        state.current_column_predicate_operation |= operation;
+        state.scan.builder.add_column_predicate(state.current_column_predicate_name.c_str(),
+                                                state.current_column_predicate_qualifier.c_str(),
+                                                state.current_column_predicate_operation, "");
       }
       ParserState &state;
       uint32_t operation;
@@ -2793,10 +2800,16 @@ namespace Hypertable {
             >> !column_qualifier_spec
             >> RE
             >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::REGEX_MATCH)]
+            | REGEXP >> LPAREN
+            >> identifier[scan_set_column_predicate_name(self.state)]
+            >> !column_qualifier_spec
+            >> COMMA
+            >> string_literal[scan_set_column_predicate_value(self.state, ColumnPredicate::REGEX_MATCH)]
+            >> RPAREN
             | EXISTS >> LPAREN
             >> identifier[scan_set_column_predicate_name(self.state)]
             >> column_qualifier_spec
-            >> RPAREN
+            >> RPAREN[scan_set_column_predicate_value(self.state)]
             ;
 
           column_qualifier_spec

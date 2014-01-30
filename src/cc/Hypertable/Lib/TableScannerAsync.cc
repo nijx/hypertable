@@ -144,15 +144,21 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
   LoadDataEscape lde;
   bool qualifier_match_only = false;
   bool value_match = false;
+  size_t qualifier_index_count = 0;
+  size_t value_index_count = 0;
 
   // for value prefix queries we require normal indicies for ALL scanned columns
   if (!primary_spec.column_predicates.empty()) {
 
     foreach_ht (const ColumnPredicate &cp, primary_spec.column_predicates) {
 
-      cf = table->schema()->get_column_family(cp.column_family);
-      if (!cf || !cf->has_index)
+      if ((cf = table->schema()->get_column_family(cp.column_family)) == 0)
         return false;
+
+      if (cf->has_index)
+        value_index_count++;
+      if (cf->has_qualifier_index)
+        qualifier_index_count++;
 
       // Make sure that all prediates match against the value index, or all
       // predicates match against the qualifier index
@@ -240,7 +246,14 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
         return false;
     }
 
-    *use_qualifier = qualifier_match_only;
+    if (qualifier_match_only) {
+      if (qualifier_index_count < primary_spec.column_predicates.size())
+        return false;
+      *use_qualifier = qualifier_match_only;      
+    }
+    else if (value_index_count < primary_spec.column_predicates.size())
+      return false;
+
     return true;
   }
 
