@@ -32,12 +32,11 @@
 #include <Common/ReferenceCount.h>
 #include <Common/StringExt.h>
 
+#include <Hypertable/Lib/CellPredicate.h>
 #include <Hypertable/Lib/Key.h>
-#include <Hypertable/Lib/Schema.h>
 #include <Hypertable/Lib/ScanSpec.h>
+#include <Hypertable/Lib/Schema.h>
 #include <Hypertable/Lib/Types.h>
-
-#include <Hypertable/RangeServer/CellPredicate.h>
 
 #include <boost/shared_ptr.hpp>
 

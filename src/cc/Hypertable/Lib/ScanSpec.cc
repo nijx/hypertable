@@ -335,7 +335,6 @@ ScanSpec::parse_column(const char *column_str, String &family,
 
   family = String(column_str, (size_t)(colon-column_str));
 
-
   raw_qualifier = colon+1;
   raw_qualifier_len = strlen(raw_qualifier);
 

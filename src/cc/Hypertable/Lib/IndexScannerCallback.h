@@ -22,13 +22,17 @@
 #ifndef HYPERTABLE_INDEXSCANNERCALLBACK_H
 #define HYPERTABLE_INDEXSCANNERCALLBACK_H
 
-#include "Common/Filesystem.h"
-#include "HyperAppHelper/Unique.h"
-#include "ResultCallback.h"
-#include "TableScannerAsync.h"
-#include "ScanSpec.h"
-#include "Namespace.h"
-#include "Client.h"
+#include <Hypertable/Lib/Client.h>
+#include <Hypertable/Lib/LoadDataEscape.h>
+#include <Hypertable/Lib/Namespace.h>
+#include <Hypertable/Lib/ResultCallback.h>
+#include <Hypertable/Lib/ScanSpec.h>
+#include <Hypertable/Lib/TableScannerAsync.h>
+
+#include <HyperAppHelper/Unique.h>
+
+#include <Common/Filesystem.h>
+#include <Common/FlyweightString.h>
 
 #include <boost/thread/condition.hpp>
 
@@ -97,11 +101,11 @@ static String last;
   public:
 
     IndexScannerCallback(TablePtr primary_table, const ScanSpec &primary_spec, 
-                         std::vector<std::pair<String, String> > qualifier_filters,
+                         std::vector<CellPredicate> &cell_predicates,
                          ResultCallback *original_cb, uint32_t timeout_ms, 
                          bool qualifier_scan)
       : ResultCallback(), m_primary_table(primary_table), 
-        m_primary_spec(primary_spec), m_qualifier_filters(qualifier_filters),
+        m_primary_spec(primary_spec),
         m_original_cb(original_cb), m_timeout_ms(timeout_ms), m_mutator(0), 
         m_row_limit(0), m_cell_limit(0), m_cell_count(0), m_row_offset(0), 
         m_cell_offset(0), m_row_count(0), m_cell_limit_per_family(0), 
@@ -110,6 +114,8 @@ static String last;
         m_final_decrement(false), m_shutdown(false) {
       atomic_set(&m_outstanding_scanners, 0);
       m_original_cb->increment_outstanding();
+
+      m_cell_predicates.swap(cell_predicates);
 
       if (primary_spec.row_limit != 0 ||
           primary_spec.cell_limit != 0 ||
@@ -283,59 +289,89 @@ static String last;
       // split the index row into column id, cell value and cell row key
       size_t old_inserted_keys = m_tmp_keys.size();
       Cells cells;
+      const char *unescaped_row;
+      const char *unescaped_qualifier;
+      const char *unescaped_value;
+      size_t unescaped_row_len;
+      size_t unescaped_qualifier_len;
+      size_t unescaped_value_len;
+      LoadDataEscape escaper_row;
+      LoadDataEscape escaper_qualifier;
+      LoadDataEscape escaper_value;
       scancells->get(cells);
       foreach_ht (Cell &cell, cells) {
-        char *r = (char *)cell.row_key;
+        char *qv = (char *)cell.row_key;
 
-        // Do qualifier match
-        if (!m_qualifier_filters.empty()) {
-          if (find_if(m_qualifier_filters.begin(), m_qualifier_filters.end(),
-                      QualifierFilterMatch(r)) == m_qualifier_filters.end())
-            continue;
-        }
-
-        char *p = r + strlen(r);
-        while (*p != '\t' && p > (char *)cell.row_key)
-          p--;
-        if (*p != '\t') {
+        // get unescaped row
+        char *row = qv + strlen(qv);
+        while (*row != '\t' && row > (char *)cell.row_key)
+          row--;
+        if (*row != '\t') {
           HT_WARNF("Invalid index entry '%s' in index table '^%s'",
-                  r, m_primary_table->get_name().c_str());
+                   qv, m_primary_table->get_name().c_str());
           continue;
         }
+        *row++ = '\0';
+        escaper_row.unescape(row, strlen(row), &unescaped_row, &unescaped_row_len);
+
         // cut off the "%d," part at the beginning to get the column id
         // The max. column id is 255, therefore there must be a ',' after 3
         // positions
-        char *id = r;
-        while (*r != ',' && (r - id <= 4))
-          r++;
-        if (*r != ',') {
+        char *id = qv;
+        while (*qv != ',' && (qv - id <= 4))
+          qv++;
+        if (*qv != ',') {
           HT_WARNF("Invalid index entry '%s' in index table '^%s'",
                   id, m_primary_table->get_name().c_str());
           continue;
         }
-        *r++ = 0;
+        *qv++ = 0;
         uint32_t cfid = (uint32_t)atoi(id);
         if (!cfid || m_column_map.find(cfid) == m_column_map.end()) {
           HT_WARNF("Invalid index entry '%s' in index table '^%s'",
-                  r, m_primary_table->get_name().c_str());
+                   qv, m_primary_table->get_name().c_str());
           continue;
         }
 
-        // split strings; after the next line p will point to the row key
-        // and r will point to the value. id points to the column id
-        *p++ = 0;
+        if (m_qualifier_scan) {
+          escaper_qualifier.unescape(qv, strlen(qv),
+                                     &unescaped_qualifier, &unescaped_qualifier_len);
+
+          if (!m_cell_predicates[cfid].matches(unescaped_qualifier,
+                                               unescaped_qualifier_len, "", 0))
+            continue;
+        }
+        else {
+          char *value = qv;
+          if ((qv = strchr(value, '\t')) == 0) {
+            HT_WARNF("Invalid index entry '%s' in index table '^%s'",
+                     value, m_primary_table->get_name().c_str());
+            continue;
+          }
+          size_t value_len = qv-value;
+          *qv++ = 0;
+          escaper_qualifier.unescape(qv, strlen(qv),
+                                     &unescaped_qualifier, &unescaped_qualifier_len);
+          escaper_value.unescape(value, value_len,
+                                 &unescaped_value, &unescaped_value_len);
+          if (!m_cell_predicates[cfid].matches(unescaped_qualifier,
+                                               unescaped_qualifier_len,
+                                               unescaped_value,
+                                               unescaped_value_len))
+            continue;
+        }
 
         // if the original query specified row intervals then these have
         // to be filtered in the client
         if (primary_spec.row_intervals.size()) {
-          if (!row_intervals_match(primary_spec.row_intervals, p))
+          if (!row_intervals_match(primary_spec.row_intervals, unescaped_row))
             continue;
         }
 
         // same about cell intervals
         if (primary_spec.cell_intervals.size()) {
-          if (!cell_intervals_match(primary_spec.cell_intervals, p, 
-                                m_column_map[cfid].c_str()))
+          if (!cell_intervals_match(primary_spec.cell_intervals, unescaped_row,
+                                    m_column_map[cfid].c_str()))
             continue;
         }
 
@@ -343,20 +379,20 @@ static String last;
         // temporary table. otherwise buffer it in memory but make sure
         // that no duplicate rows are inserted
         KeySpec key;
-        key.row = p;
-        key.row_len = strlen(p);
+        key.row = m_strings.get(unescaped_row);
+        key.row_len = unescaped_row_len;
         key.column_family = m_column_map[cfid].c_str();
         key.timestamp = cell.timestamp;
         if (m_qualifier_scan) {
-          key.column_qualifier = r;
-          key.column_qualifier_len = strlen(r);
+          key.column_qualifier = m_strings.get(unescaped_qualifier);
+          key.column_qualifier_len = unescaped_qualifier_len;
         }
         if (m_mutator)
           m_mutator->set(key, 0);
         else if (m_tmp_keys.find(key) == m_tmp_keys.end()) {
           m_tmp_keys.insert(CkeyMap::value_type(key, true));
         }
-        m_tmp_cutoff += key.row_len + sizeof(KeySpec);
+        m_tmp_cutoff += sizeof(KeySpec) + key.row_len + key.column_qualifier_len;
       }
 
       // if the temporary table was not yet created: make sure that the keys
@@ -747,8 +783,8 @@ static String last;
     // the original scan spec for the primary table
     ScanSpecBuilder m_primary_spec;
 
-    // Vectory of first-pass qualifier filters
-    std::vector<std::pair<String, String> > m_qualifier_filters;
+    // Vector of first-pass cell predicates
+    std::vector<CellPredicate> m_cell_predicates;
 
     // the original callback object specified by the user
     ResultCallback *m_original_cb;
@@ -812,6 +848,9 @@ static String last;
 
     // buffer for accumulating keys from the index
     CkeyMap m_tmp_keys;
+
+    // buffer for accumulating keys from the index
+    FlyweightString m_strings;
 
     // accumulator; if > TMP_CUTOFF then store all index results in a
     // temporary table

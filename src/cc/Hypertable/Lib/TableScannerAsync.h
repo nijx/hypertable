@@ -25,6 +25,7 @@
 #include <Common/ReferenceCount.h>
 
 #include <Hypertable/Lib/Cells.h>
+#include <Hypertable/Lib/CellPredicate.h>
 #include <Hypertable/Lib/ClientObject.h>
 #include <Hypertable/Lib/RangeLocator.h>
 #include <Hypertable/Lib/RangeServerClient.h>
@@ -139,7 +140,7 @@ namespace Hypertable {
     void move_to_next_interval_scanner(int current_scanner);
     bool use_index(TablePtr table, const ScanSpec &primary_spec, 
                    ScanSpecBuilder &index_spec,
-                   std::vector<std::pair<String, String> > &post_filter,
+                   std::vector<CellPredicate> &cell_predicates,
                    bool *use_qualifier);
     void transform_primary_scan_spec(ScanSpecBuilder &primary_spec);
     void add_index_row(ScanSpecBuilder &ssb, const char *row);

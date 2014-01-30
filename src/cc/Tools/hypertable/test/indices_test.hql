@@ -284,8 +284,8 @@ INSERT INTO t VALUES ("row22", "b:foo", "cellb22foo");
 INSERT INTO t VALUES ("row20", "b:bar", "cellb20bar");
 INSERT INTO t VALUES ("row21", "b:bar", "cellb21bar");
 INSERT INTO t VALUES ("row22", "b:bar", "cellb22bar");
-SELECT b:foo FROM t WHERE b =^ "cell";
-SELECT b:bar FROM t WHERE b =^ "cell";
+SELECT b:foo FROM t WHERE b:* =^ "cell";
+SELECT b:bar FROM t WHERE b:* =^ "cell";
 
 # qualifier indices: CREATE TABLE 
 DROP TABLE t;
@@ -453,8 +453,8 @@ SELECT a:q0, a:q1, a:q2 FROM t WHERE ROW REGEXP "\d$";
 
 INSERT INTO t VALUES ("2011-11-11 08:09:29", "rowa12", "a:q1", "cella9xx");
 INSERT INTO t VALUES ("2011-11-11 08:09:29", "rowa13", "a:q1", "cella9xy");
-SELECT a:q1 FROM t WHERE a = "cella9";
-SELECT a:q1 FROM t WHERE a =^ "cella9";
+SELECT a:q1 FROM t WHERE a:* = "cella9";
+SELECT a:q1 FROM t WHERE a:* =^ "cella9";
 SELECT a:q1 FROM t WHERE VALUE REGEXP "x";
 SELECT a:q1 FROM t WHERE VALUE REGEXP "x$";
 
@@ -479,9 +479,9 @@ SELECT a:q0 FROM t CELL_OFFSET 2 LIMIT 3;
 SELECT a:q0 FROM t CELL_OFFSET 5 CELL_LIMIT 1;
 
 DELETE * FROM t WHERE ROW = "rowa2";
-SELECT a:q0 FROM t WHERE a =^ "c";
-SELECT a:q0 FROM t WHERE a =^ "c" RETURN_DELETES;
-SELECT a:q0 FROM t WHERE a =^ "c" RETURN_DELETES KEYS_ONLY;
+SELECT a:q0 FROM t WHERE a:* =^ "c";
+SELECT a:q0 FROM t WHERE a:* =^ "c" RETURN_DELETES;
+SELECT a:q0 FROM t WHERE a:* =^ "c" RETURN_DELETES KEYS_ONLY;
 
 # negative test - index doesn't return any result
 SELECT a:q0 FROM t WHERE a =^ "x";
@@ -496,7 +496,7 @@ SELECT a:q0 FROM t WHERE a =^ "cella2";
 # overwrite a value, make sure that the index still works
 INSERT INTO t VALUES ("2011-11-11 08:09:29", "rowa13", "a:q1", "cella9xz");
 SELECT a:q1 FROM t WHERE VALUE REGEXP "^cella9";
-SELECT a:q1 FROM t WHERE a =^ "cella9";
+SELECT a:q1 FROM t WHERE a:* =^ "cella9";
 
 INSERT INTO t VALUES ("rowa20", "a", "cella20");
 SELECT a FROM t WHERE ROW = "rowa20";

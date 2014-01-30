@@ -27,6 +27,8 @@
 #ifndef HYPERTABLE_CELLPREDICATE_H
 #define HYPERTABLE_CELLPREDICATE_H
 
+#include <Hypertable/Lib/ScanSpec.h>
+
 #include<re2/re2.h>
 
 #include <boost/shared_ptr.hpp>

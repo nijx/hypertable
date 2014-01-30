@@ -898,11 +898,11 @@ INSERT INTO t VALUES ("row22", "b:foo", "cellb22foo");
 INSERT INTO t VALUES ("row20", "b:bar", "cellb20bar");
 INSERT INTO t VALUES ("row21", "b:bar", "cellb21bar");
 INSERT INTO t VALUES ("row22", "b:bar", "cellb22bar");
-SELECT b:foo FROM t WHERE b =^ "cell";
+SELECT b:foo FROM t WHERE b:* =^ "cell";
 row20	b:foo	cellb20foo
 row21	b:foo	cellb21foo
 row22	b:foo	cellb22foo
-SELECT b:bar FROM t WHERE b =^ "cell";
+SELECT b:bar FROM t WHERE b:* =^ "cell";
 row20	b:bar	cellb20bar
 row21	b:bar	cellb21bar
 row22	b:bar	cellb22bar
@@ -1607,9 +1607,9 @@ rowa9	a:q1	cella9
 
 INSERT INTO t VALUES ("2011-11-11 08:09:29", "rowa12", "a:q1", "cella9xx");
 INSERT INTO t VALUES ("2011-11-11 08:09:29", "rowa13", "a:q1", "cella9xy");
-SELECT a:q1 FROM t WHERE a = "cella9";
+SELECT a:q1 FROM t WHERE a:* = "cella9";
 rowa9	a:q1	cella9
-SELECT a:q1 FROM t WHERE a =^ "cella9";
+SELECT a:q1 FROM t WHERE a:* =^ "cella9";
 rowa12	a:q1	cella9xx
 rowa13	a:q1	cella9xy
 rowa9	a:q1	cella9
@@ -1717,14 +1717,14 @@ SELECT a:q0 FROM t CELL_OFFSET 5 CELL_LIMIT 1;
 rowa3	a:q0	cella4
 
 DELETE * FROM t WHERE ROW = "rowa2";
-SELECT a:q0 FROM t WHERE a =^ "c";
+SELECT a:q0 FROM t WHERE a:* =^ "c";
 rowa0	a:q0	cella0
 rowa1	a:q0	cella1
 rowa3	a:q0	cella5
 rowa3	a:q0	cella4
 rowa3	a:q0	cella3
 rowa4	a:q0	cella4
-SELECT a:q0 FROM t WHERE a =^ "c" RETURN_DELETES;
+SELECT a:q0 FROM t WHERE a:* =^ "c" RETURN_DELETES;
 rowa0	a:q0	cella0
 rowa1	a:q0	cella1
 rowa2		DELETE ROW
@@ -1732,7 +1732,7 @@ rowa3	a:q0	cella5
 rowa3	a:q0	cella4
 rowa3	a:q0	cella3
 rowa4	a:q0	cella4
-SELECT a:q0 FROM t WHERE a =^ "c" RETURN_DELETES KEYS_ONLY;
+SELECT a:q0 FROM t WHERE a:* =^ "c" RETURN_DELETES KEYS_ONLY;
 rowa0
 rowa1
 rowa2
@@ -1757,7 +1757,7 @@ SELECT a:q1 FROM t WHERE VALUE REGEXP "^cella9";
 rowa12	a:q1	cella9xx
 rowa13	a:q1	cella9xz
 rowa9	a:q1	cella9
-SELECT a:q1 FROM t WHERE a =^ "cella9";
+SELECT a:q1 FROM t WHERE a:* =^ "cella9";
 rowa12	a:q1	cella9xx
 rowa13	a:q1	cella9xz
 rowa9	a:q1	cella9

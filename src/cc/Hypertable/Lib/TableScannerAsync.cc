@@ -27,6 +27,7 @@
 #include <Hypertable/Lib/LoadDataEscape.h>
 
 #include <Common/Error.h>
+#include <Common/Regex.h>
 #include <Common/String.h>
 
 #include <cctype>
@@ -53,14 +54,14 @@ TableScannerAsync::TableScannerAsync(Comm *comm,
   ScanSpecBuilder index_spec;
   const ScanSpec *first_pass_spec;
   bool use_qualifier = false;
-  std::vector<std::pair<String, String> > qualifier_filters;
+  std::vector<CellPredicate> cell_predicates;
 
   HT_ASSERT(timeout_ms);
 
   // can we optimize this query with an index?
   if (!(flags & Table::SCANNER_FLAG_IGNORE_INDEX)
       && use_index(table, scan_spec, index_spec,
-                   qualifier_filters, &use_qualifier)) {
+                   cell_predicates, &use_qualifier)) {
 
     first_pass_spec = &index_spec.get();
 
@@ -68,7 +69,7 @@ TableScannerAsync::TableScannerAsync(Comm *comm,
 
     // create a ResultCallback object which will load the keys from
     // the index, then sort and verify them
-    cb = new IndexScannerCallback(table, primary_spec.get(), qualifier_filters,
+    cb = new IndexScannerCallback(table, primary_spec.get(), cell_predicates,
                                   cb, timeout_ms, use_qualifier);
 
     // get the index table
@@ -118,7 +119,7 @@ namespace {
 
 bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec, 
                                   ScanSpecBuilder &index_spec,
-                                  std::vector<std::pair<String, String> > &post_filter,
+                                  std::vector<CellPredicate> &cell_predicates,
                                   bool *use_qualifier)
 {
   HT_ASSERT(!table->schema()->need_id_assignment());
@@ -131,130 +132,115 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
   index_spec.set_end_time(primary_spec.time_interval.second);
   index_spec.add_column("v1");
 
-  // if a column qualifier is specified then make sure that all columns have
-  // a qualifier index. only support prefix column qualifiers or exact
-  // qualifiers, but not the regexp qualifier
-  for (size_t i = 0; i < primary_spec.columns.size(); i++) {
-    Schema::ColumnFamily *cf = 0;
-    const char *qualifier_start = strchr(primary_spec.columns[i], ':');
-    if (!qualifier_start) {
-      *use_qualifier = false;
-      break;
-    }
+  cell_predicates.resize(256);
 
-    String column(primary_spec.columns[i], qualifier_start);
-    cf = table->schema()->get_column_family(column);
-    if (!cf || !cf->has_qualifier_index) {
-      *use_qualifier = false;
-      break;
-    }
-
-    qualifier_start++;
-    String qualifier(qualifier_start);
-    boost::algorithm::trim_if(qualifier, boost::algorithm::is_any_of("'\""));
-
-    if (qualifier[0] == '/') {
-      *use_qualifier = false;
-      break;
-    }
-
-    // prefix match: create row interval ["%d,qualifier", ..)
-    if (qualifier[0] == '^') {
-      String q(qualifier.c_str() + 1);
-      trim_if(q, boost::algorithm::is_any_of("'\""));
-      String s = format("%d,%s", (int)cf->id, q.c_str());
-      add_index_row(index_spec, s.c_str());
-    }
-    // exact match:  create row interval ["%d,qualifier\t", ..)
-    else {
-      String s = format("%d,%s\t", (int)cf->id, qualifier.c_str());
-      add_index_row(index_spec, s.c_str());
-    }
-
-    *use_qualifier = true;
-  }
-
-  if (*use_qualifier)
-    return true;
-
-  index_spec.get().row_regexp = 0;
-  index_spec.get().columns.resize(0);
+  String family;
+  DynamicBuffer regex_prefix_buf;
+  const char *prefix;
+  size_t prefix_len;
+  Schema::ColumnFamily *cf = 0;
+  String index_row_prefix;
+  DynamicBuffer index_row_buf;
+  LoadDataEscape lde;
+  bool qualifier_match_only = false;
+  bool value_match = false;
 
   // for value prefix queries we require normal indicies for ALL scanned columns
   if (!primary_spec.column_predicates.empty()) {
-    std::pair<String, String> filter;
-    bool encountered_qualifier = false;
-
-    post_filter.reserve(primary_spec.column_predicates.size());
 
     foreach_ht (const ColumnPredicate &cp, primary_spec.column_predicates) {
-      Schema::ColumnFamily *cf=table->schema()->get_column_family(
-                                cp.column_family);
+
+      cf = table->schema()->get_column_family(cp.column_family);
       if (!cf || !cf->has_index)
         return false;
 
-      StaticBuffer sb((2*cp.value_len) + 5);
-      char *p = (char *)sb.base;
-      sprintf(p, "%d,", (int)cf->id);
-      p += strlen(p);
+      // Make sure that all prediates match against the value index, or all
+      // predicates match against the qualifier index
+      if (cp.operation & ColumnPredicate::VALUE_MATCH) {
+        value_match = true;
+        if (qualifier_match_only)
+          return false;
+      }
+      else if (cp.operation & ColumnPredicate::QUALIFIER_MATCH) {
+        qualifier_match_only = true;
+        if (value_match)
+          return false;
+      }
 
       if (cp.operation & ColumnPredicate::REGEX_MATCH) {
-        const char *prefix;
-        size_t prefix_len;
-        if (!extract_prefix_from_regex(cp.value, cp.value_len, &prefix, &prefix_len))
+        if (!Regex::extract_prefix((const char *)cp.value, (size_t)cp.value_len,
+                                   &prefix, &prefix_len, regex_prefix_buf))
           return false;
-        memcpy(p, prefix, prefix_len);
-        p += prefix_len;
+        if (index_row_buf.size < prefix_len+5)
+          index_row_buf.grow(prefix_len+5);
+        sprintf((char *)index_row_buf.base, "%d,", (int)cf->id);
+        index_row_buf.ptr =
+          index_row_buf.base + strlen((const char *)index_row_buf.base);
+        index_row_buf.add_unchecked(prefix, prefix_len);
+        *index_row_buf.ptr = 0;
+        HT_ASSERT(index_row_buf.fill() < index_row_buf.size);
+        add_index_row(index_spec, (const char *)index_row_buf.base);
+        cell_predicates[cf->id].add_column_predicate(cp);
       }
       else if ((cp.operation & ColumnPredicate::EXACT_MATCH) ||
                (cp.operation & ColumnPredicate::PREFIX_MATCH)) {
 
         // every \t in the original value gets escaped
         const char *value;
-        const char *escaped_qualifier;
-        size_t valuelen;
-        size_t escaped_qualifier_len;
-        LoadDataEscape lde;
-        lde.escape(cp.value, cp.value_len, &value, &valuelen);
+        size_t value_len;
+        lde.escape(cp.value, cp.value_len, &value, &value_len);
 
         // exact match:  create row interval ["%d,value\t", ..)
         // prefix match: create row interval ["%d,value", ..)
-        memcpy(p, value, valuelen);
-        p += valuelen;
-
-        if (cp.column_qualifier && *cp.column_qualifier) {
-          encountered_qualifier = true;
-          lde.escape(cp.column_qualifier, strlen(cp.column_qualifier),
-                     &escaped_qualifier, &escaped_qualifier_len);
-        }
-        else {
-          escaped_qualifier = "";
-          escaped_qualifier_len = 0;
-        }
-
-        if (cp.operation & ColumnPredicate::EXACT_MATCH) {
-          *p++  = '\t';
-          filter.first = String((const char *)sb.base, p-(char *)sb.base) + 
-            String(escaped_qualifier, escaped_qualifier_len) + "\t";
-          filter.second.clear();
-        }
-        else {
-          filter.first = String((const char *)sb.base, p-(char *)sb.base);
-          filter.second = String("\t") + String(escaped_qualifier, escaped_qualifier_len) + "\t";
-        }
-        post_filter.push_back(filter);
+        if (index_row_buf.size < value_len+6)
+          index_row_buf.grow(value_len+6);
+        // %d,
+        sprintf((char *)index_row_buf.base, "%d,", (int)cf->id);
+        index_row_buf.ptr =
+          index_row_buf.base + strlen((const char *)index_row_buf.base);
+        // value
+        index_row_buf.add_unchecked(value, value_len);
+        if (cp.operation & ColumnPredicate::EXACT_MATCH)
+          *index_row_buf.ptr = '\t';
+        *index_row_buf.ptr = 0;
+        HT_ASSERT(index_row_buf.fill() < index_row_buf.size);
+        add_index_row(index_spec, (const char *)index_row_buf.base);
+        cell_predicates[cf->id].add_column_predicate(cp);
       }
-      *p++ = '\0';
+      else if (cp.operation & ColumnPredicate::QUALIFIER_REGEX_MATCH) {
+        if (Regex::extract_prefix(cp.column_qualifier, cp.column_qualifier_len,
+                                  &prefix, &prefix_len, regex_prefix_buf)) {
+          index_row_prefix.clear();
+          index_row_prefix.reserve(5+prefix_len);
+          index_row_prefix = format("%d,", (int)cf->id);
+          index_row_prefix.append(prefix, prefix_len);
+          add_index_row(index_spec, index_row_prefix.c_str());
+          cell_predicates[cf->id].add_column_predicate(cp);
+        }
+        else
+          return false;
+      }
+      else if ((cp.operation & ColumnPredicate::QUALIFIER_EXACT_MATCH) ||
+               (cp.operation & ColumnPredicate::QUALIFIER_PREFIX_MATCH)) {
 
-      add_index_row(index_spec, (const char *)sb.base);
+        const char *escaped_qualifier;
+        size_t escaped_qualifier_len;
+        lde.escape(cp.column_qualifier, cp.column_qualifier_len,
+                   &escaped_qualifier, &escaped_qualifier_len);
+        index_row_prefix.clear();
+        index_row_prefix.reserve(6+escaped_qualifier_len);
+        index_row_prefix = format("%d,", (int)cf->id);
+        index_row_prefix.append(escaped_qualifier, escaped_qualifier_len);
+        if (cp.operation & ColumnPredicate::QUALIFIER_EXACT_MATCH)
+          index_row_prefix.append("\t", 1);
+        add_index_row(index_spec, index_row_prefix.c_str());
+        cell_predicates[cf->id].add_column_predicate(cp);        
+      }
+      else
+        return false;
     }
 
-    // If no qualifiers were encountered in any of the column predicates,
-    // don't bother checking
-    if (!encountered_qualifier)
-      post_filter.clear();
-
-    *use_qualifier = false;
+    *use_qualifier = qualifier_match_only;
     return true;
   }
 
@@ -280,17 +266,22 @@ void TableScannerAsync::transform_primary_scan_spec(ScanSpecBuilder &primary_spe
         primary_spec.add_column(column);
     }
     else {
+      String family;
+      const char *colon;
+      StringSet selected_columns;
       // If columns selected that are not referenced in predicate, throw error
       foreach_ht (const char *column, primary_spec.get().columns) {
-        if (predicate_columns.count(column) == 0)
+        family.clear();
+        if ((colon = strchr(column, ':')) != 0)
+          family.append(column, colon-column);
+        else
+          family.append(column);
+        if (predicate_columns.count(family.c_str()) == 0)
           HT_THROWF(Error::HQL_PARSE_ERROR,
                     "Selected column %s must be referenced in Column predicate",
                     column);
+        selected_columns.insert(family);
       }
-      // Load selected_columns set
-      CstrSet selected_columns;
-      foreach_ht (const char *column, primary_spec.get().columns)
-        selected_columns.insert(column);
 
       // Add predicate columns that are missing from selection set
       foreach_ht (const ColumnPredicate &predicate,
