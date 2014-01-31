@@ -33,6 +33,7 @@
 
 #include <boost/shared_ptr.hpp>
 
+#include <bitset>
 #include <vector>
 
 namespace Hypertable {
@@ -42,98 +43,12 @@ namespace Hypertable {
 
   /// Cell predicate.
   class CellPredicate {
-  public:
-
-    /// Default constructor.
-    CellPredicate() :
-      cutoff_time(0), max_versions(0), counter(false), indexed(false) { }
-
-    /// Evaluates predicate for the given cell.
-    /// @param qualifier Cell column qualifier
-    /// @param qualifier_len Cell column qualifier length
-    /// @param value Cell value
-    /// @param value_len Cell value length
-    /// @return <i>true</i> if predicate matches, otherwise <i>false</i>
-    bool matches(const char *qualifier, size_t qualifier_len,
-                 const char* value, size_t value_len) {
-      if (patterns.empty())
-        return true;
-
-      foreach_ht (CellPattern &cp, patterns) {
-
-        // Qualifier match
-        if (cp.operation & ColumnPredicate::QUALIFIER_MATCH) {
-          if (cp.operation & ColumnPredicate::QUALIFIER_EXACT_MATCH) {
-            if (qualifier_len != cp.qualifier_len ||
-                memcmp(qualifier, cp.qualifier, qualifier_len))
-              continue;
-          }
-          else if (cp.operation & ColumnPredicate::QUALIFIER_PREFIX_MATCH) {
-            if (qualifier_len < cp.qualifier_len)
-              continue;
-            const char *p1 = qualifier;
-            const char *p2 = cp.qualifier;
-            const char *prefix_end = cp.qualifier + cp.qualifier_len;
-            for (; p2 < prefix_end; ++p1,++p2) {
-              if (*p1 != *p2)
-                break;
-            }
-            if (p2 != prefix_end)
-              continue;
-          }
-          else if (cp.operation & ColumnPredicate::QUALIFIER_REGEX_MATCH) {
-            if (!cp.regex_qualifier_match(qualifier))
-              continue;
-          }
-        }
-        else if (*qualifier)
-          continue;
-
-        // Value match
-        if (cp.operation & ColumnPredicate::VALUE_MATCH) {
-          if (cp.operation & ColumnPredicate::EXACT_MATCH) {
-            if (cp.value_len != value_len ||
-                memcmp(cp.value, value, cp.value_len))
-              continue;
-          }
-          else if (cp.operation & ColumnPredicate::PREFIX_MATCH) {
-            if (cp.value_len > value_len ||
-                memcmp(cp.value, value, cp.value_len))
-              continue;
-          }
-          else if (cp.operation & ColumnPredicate::REGEX_MATCH) {
-            if (!cp.regex_value_match(value))
-              continue;
-          }
-        }
-        return true;
-      }
-      return false;
-    }
-
-    void add_column_predicate(const ColumnPredicate &column_predicate) {
-      patterns.push_back(CellPattern(column_predicate));
-    }
-
-    /// TTL cutoff time
-    int64_t cutoff_time;
-
-    /// Max versions (0 for all versions)
-    uint32_t max_versions;
-
-    /// Column family has counter option
-    bool counter;
-
-    /// Column family is indexed
-    bool indexed;
-
-  private:
 
     struct CellPattern {
-      CellPattern(const ColumnPredicate &cp) : 
+      CellPattern(const ColumnPredicate &cp, size_t id) : 
         qualifier(cp.column_qualifier), value(cp.value),
         qualifier_len(cp.column_qualifier_len), value_len(cp.value_len),
-        operation(cp.operation) { }
+        operation(cp.operation), id(id) { }
       bool regex_qualifier_match(const char *str) {
         if (!qualifier_regex) {
           String pattern(qualifier, (size_t)qualifier_len);
@@ -155,7 +70,114 @@ namespace Hypertable {
       uint32_t operation;
       boost::shared_ptr<RE2> value_regex;
       boost::shared_ptr<RE2> qualifier_regex;
+      size_t id;
     };
+
+  public:
+
+    /// Default constructor.
+    CellPredicate() :
+      cutoff_time(0), max_versions(0), next_id(0),
+      counter(false), indexed(false) { }
+
+    void all_matches(const char *qualifier, size_t qualifier_len,
+                     const char* value, size_t value_len,
+                     std::bitset<32> &matching) {
+      foreach_ht (CellPattern &cp, patterns) {
+        if (pattern_match(cp, qualifier, qualifier_len, value, value_len))
+          matching.set(cp.id);
+      }
+    }
+
+    /// Evaluates predicate for the given cell.
+    /// @param qualifier Cell column qualifier
+    /// @param qualifier_len Cell column qualifier length
+    /// @param value Cell value
+    /// @param value_len Cell value length
+    /// @return <i>true</i> if predicate matches, otherwise <i>false</i>
+    bool matches(const char *qualifier, size_t qualifier_len,
+                 const char* value, size_t value_len) {
+      if (patterns.empty())
+        return true;
+      foreach_ht (CellPattern &cp, patterns) {
+        if (pattern_match(cp, qualifier, qualifier_len, value, value_len))
+          return true;
+      }
+      return false;
+    }
+
+    bool pattern_match(CellPattern &cp, const char *qualifier,
+                       size_t qualifier_len, const char* value,
+                       size_t value_len) {
+
+      // Qualifier match
+      if (cp.operation & ColumnPredicate::QUALIFIER_MATCH) {
+        if (cp.operation & ColumnPredicate::QUALIFIER_EXACT_MATCH) {
+          if (qualifier_len != cp.qualifier_len ||
+              memcmp(qualifier, cp.qualifier, qualifier_len))
+            return false;
+        }
+        else if (cp.operation & ColumnPredicate::QUALIFIER_PREFIX_MATCH) {
+          if (qualifier_len < cp.qualifier_len)
+            return false;
+          const char *p1 = qualifier;
+          const char *p2 = cp.qualifier;
+          const char *prefix_end = cp.qualifier + cp.qualifier_len;
+          for (; p2 < prefix_end; ++p1,++p2) {
+            if (*p1 != *p2)
+              break;
+          }
+          if (p2 != prefix_end)
+            return false;
+        }
+        else if (cp.operation & ColumnPredicate::QUALIFIER_REGEX_MATCH) {
+          if (!cp.regex_qualifier_match(qualifier))
+            return false;
+        }
+      }
+      else if (*qualifier)
+        return false;
+
+      // Value match
+      if (cp.operation & ColumnPredicate::VALUE_MATCH) {
+        if (cp.operation & ColumnPredicate::EXACT_MATCH) {
+          if (cp.value_len != value_len ||
+              memcmp(cp.value, value, cp.value_len))
+            return false;
+        }
+        else if (cp.operation & ColumnPredicate::PREFIX_MATCH) {
+          if (cp.value_len > value_len ||
+              memcmp(cp.value, value, cp.value_len))
+            return false;
+        }
+        else if (cp.operation & ColumnPredicate::REGEX_MATCH) {
+          if (!cp.regex_value_match(value))
+            return false;
+        }
+      }
+      return true;
+    }
+
+    void add_column_predicate(const ColumnPredicate &column_predicate) {
+      patterns.push_back(CellPattern(column_predicate, next_id++));
+    }
+
+    /// TTL cutoff time
+    int64_t cutoff_time;
+
+    /// Max versions (0 for all versions)
+    uint32_t max_versions;
+
+    /// Next pattern identifier
+    size_t next_id;
+
+    /// Column family has counter option
+    bool counter;
+
+    /// Column family is indexed
+    bool indexed;
+
+  private:
 
     /// Vector of patterns used in predicate match
     std::vector<CellPattern> patterns;

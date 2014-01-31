@@ -333,12 +333,23 @@ static String last;
           continue;
         }
 
+        uint32_t matching = 0;
+
         if (m_qualifier_scan) {
           escaper_qualifier.unescape(qv, strlen(qv),
                                      &unescaped_qualifier, &unescaped_qualifier_len);
 
-          if (!m_cell_predicates[cfid].matches(unescaped_qualifier,
-                                               unescaped_qualifier_len, "", 0))
+          if (primary_spec.and_column_predicates) {
+            std::bitset<32> bits;
+            m_cell_predicates[cfid].all_matches(unescaped_qualifier,
+                                                unescaped_qualifier_len,
+                                                "", 0, bits);
+            if ((matching = (uint32_t)bits.to_ulong()) == 0L)
+              continue;
+            
+          }
+          else if (!m_cell_predicates[cfid].matches(unescaped_qualifier,
+                                                    unescaped_qualifier_len, "", 0))
             continue;
         }
         else {
@@ -354,10 +365,21 @@ static String last;
                                      &unescaped_qualifier, &unescaped_qualifier_len);
           escaper_value.unescape(value, value_len,
                                  &unescaped_value, &unescaped_value_len);
-          if (!m_cell_predicates[cfid].matches(unescaped_qualifier,
-                                               unescaped_qualifier_len,
-                                               unescaped_value,
-                                               unescaped_value_len))
+          if (primary_spec.and_column_predicates) {
+            std::bitset<32> bits;
+            m_cell_predicates[cfid].all_matches(unescaped_qualifier,
+                                                unescaped_qualifier_len,
+                                                unescaped_value,
+                                                unescaped_value_len,
+                                                bits);
+            if ((matching = (uint32_t)bits.to_ulong()) == 0L)
+              continue;
+
+          }
+          else if (!m_cell_predicates[cfid].matches(unescaped_qualifier,
+                                                    unescaped_qualifier_len,
+                                                    unescaped_value,
+                                                    unescaped_value_len))
             continue;
         }
 
@@ -388,9 +410,13 @@ static String last;
           key.column_qualifier_len = unescaped_qualifier_len;
         }
         if (m_mutator)
-          m_mutator->set(key, 0);
-        else if (m_tmp_keys.find(key) == m_tmp_keys.end()) {
-          m_tmp_keys.insert(CkeyMap::value_type(key, true));
+          m_mutator->set(key, &matching, sizeof(matching));
+        else {
+          CkeyMap::iterator it = m_tmp_keys.find(key);
+          if (it == m_tmp_keys.end())
+            m_tmp_keys.insert(CkeyMap::value_type(key, matching));
+          else
+            it->second |= matching;
         }
         m_tmp_cutoff += sizeof(KeySpec) + key.row_len + key.column_qualifier_len;
       }
@@ -419,7 +445,7 @@ static String last;
           create_temp_table();
           for (CkeyMap::iterator it = m_tmp_keys.begin(); 
                   it != m_tmp_keys.end(); ++it) 
-            m_mutator->set(it->first, 0);
+            m_mutator->set(it->first, &it->second, sizeof(it->second));
         }
         // if a temp table existed (or was just created): clear the buffered
         // keys. they're no longer required
@@ -457,10 +483,54 @@ static String last;
         ssb.set_time_interval(primary_spec.time_interval.first, 
                               primary_spec.time_interval.second);
 
-        // Add row interval for each entry returned from index
-        for (CkeyMap::iterator it = m_tmp_keys.begin(); 
-                it != m_tmp_keys.end(); ++it) 
-          ssb.add_row((const char *)it->first.row);
+        const char *last_row = "";
+        size_t nadded = 0;
+
+        if (primary_spec.and_column_predicates) {
+          uint32_t all_matches = 0;
+          uint32_t cur_matches = 0;
+          for (size_t i=0; i<primary_spec.column_predicates.size(); i++) {
+            all_matches <<= 1;
+            all_matches |= 1;
+          }
+
+          // Add row interval for each entry returned from index
+          for (CkeyMap::iterator it = m_tmp_keys.begin(); 
+               it != m_tmp_keys.end(); ++it) {
+            if (strcmp((const char *)it->first.row, last_row)) {
+              if (cur_matches == all_matches) {
+                ssb.add_row(last_row);
+                nadded++;
+              }
+              last_row = (const char *)it->first.row;
+              cur_matches = it->second;
+            }
+            else
+              cur_matches |= it->second;
+          }
+          if (cur_matches == all_matches) {
+            ssb.add_row(last_row);
+            nadded++;
+          }
+
+          if (nadded == 0) {
+            m_eos = true;
+            return;
+          }
+
+        }
+        else {
+          for (CkeyMap::iterator it = m_tmp_keys.begin(); 
+               it != m_tmp_keys.end(); ++it) {
+            if (strcmp((const char *)it->first.row, last_row)) {
+              if (*last_row)
+                ssb.add_row(last_row);
+              last_row = (const char *)it->first.row;
+            }
+          }
+          if (*last_row)
+            ssb.add_row(last_row);
+        }
 
         s = m_primary_table->create_scanner_async(this, ssb.get(), 
                 m_timeout_ms, Table::SCANNER_FLAG_IGNORE_INDEX);
@@ -774,7 +844,7 @@ static String last;
       return false;
     }
 
-    typedef std::map<KeySpec, bool> CkeyMap;
+    typedef std::map<KeySpec, uint32_t> CkeyMap;
     typedef std::map<String, String> CstrMap;
 
     // a pointer to the primary table
