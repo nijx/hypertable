@@ -1957,9 +1957,6 @@ SELECT * FROM User WHERE name="Doug" AND age="45";
 123456789	name	Doug
 123456789	address	2999 Canyon Rd.
 123456789	age	45
-345678901	name	Doug
-345678901	address	234 Maple St.
-345678901	age	12
 SELECT address FROM User WHERE name="Doug" AND TIMESTAMP < "2014-01-17 03:41:30";
 123456789	address	2999 Canyon Rd.
 SELECT address FROM User WHERE name="Doug" AND TIMESTAMP > "2014-01-17 03:41:30";

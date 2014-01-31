@@ -76,7 +76,6 @@ static String last;
         "<ColumnFamily>"
           "<Name>%s</Name>"
           "<Counter>false</Counter>"
-          "<MaxVersions>1</MaxVersions> "
           "<deleted>false</deleted>"
         "</ColumnFamily>";
 
@@ -110,8 +109,8 @@ static String last;
         m_row_limit(0), m_cell_limit(0), m_cell_count(0), m_row_offset(0), 
         m_cell_offset(0), m_row_count(0), m_cell_limit_per_family(0), 
         m_eos(false), m_limits_reached(false), m_readahead_count(0), 
-        m_qualifier_scan(qualifier_scan), m_tmp_cutoff(0), 
-        m_final_decrement(false), m_shutdown(false) {
+        m_cur_matching(0), m_all_matching(0), m_qualifier_scan(qualifier_scan),
+        m_tmp_cutoff(0), m_final_decrement(false), m_shutdown(false) {
       atomic_set(&m_outstanding_scanners, 0);
       m_original_cb->increment_outstanding();
 
@@ -132,6 +131,12 @@ static String last;
       }
       else
         m_track_limits = false;
+
+      // Setup bit pattern for all matching predicates
+      for (size_t i=0; i<primary_spec.column_predicates.size(); i++) {
+        m_all_matching <<= 1;
+        m_all_matching |= 1;
+      }
 
       Schema::ColumnFamilies &families =
                 primary_table->schema()->get_column_families();
@@ -461,10 +466,6 @@ static String last;
       // scanner for this table. Otherwise immediately send the temporary
       // results to the primary table for verification
       ScanSpecBuilder ssb;
-      ssb.set_max_versions(primary_spec.max_versions);
-      ssb.set_return_deletes(primary_spec.return_deletes);
-      ssb.set_keys_only(primary_spec.keys_only);
-      ssb.set_row_regexp(primary_spec.row_regexp);
 
       ScopedLock lock(m_scanner_mutex);
       if (m_shutdown)
@@ -477,6 +478,11 @@ static String last;
       }
       else {
 
+        ssb.set_max_versions(primary_spec.max_versions);
+        ssb.set_return_deletes(primary_spec.return_deletes);
+        ssb.set_keys_only(primary_spec.keys_only);
+        ssb.set_row_regexp(primary_spec.row_regexp);
+
         // Fetch primary columns and restrict by time interval
         foreach_ht (const String &s, primary_spec.columns)
           ssb.add_column(s.c_str());
@@ -484,36 +490,26 @@ static String last;
                               primary_spec.time_interval.second);
 
         const char *last_row = "";
-        size_t nadded = 0;
 
         if (primary_spec.and_column_predicates) {
-          uint32_t all_matches = 0;
-          uint32_t cur_matches = 0;
-          for (size_t i=0; i<primary_spec.column_predicates.size(); i++) {
-            all_matches <<= 1;
-            all_matches |= 1;
-          }
 
           // Add row interval for each entry returned from index
           for (CkeyMap::iterator it = m_tmp_keys.begin(); 
                it != m_tmp_keys.end(); ++it) {
             if (strcmp((const char *)it->first.row, last_row)) {
-              if (cur_matches == all_matches) {
+              if (m_cur_matching == m_all_matching)
                 ssb.add_row(last_row);
-                nadded++;
-              }
               last_row = (const char *)it->first.row;
-              cur_matches = it->second;
+              m_cur_matching = it->second;
             }
             else
-              cur_matches |= it->second;
+              m_cur_matching |= it->second;
           }
-          if (cur_matches == all_matches) {
+          if (m_cur_matching == m_all_matching)
             ssb.add_row(last_row);
-            nadded++;
-          }
+          m_cur_matching = 0;
 
-          if (nadded == 0) {
+          if (ssb.get().row_intervals.empty()) {
             m_eos = true;
             return;
           }
@@ -574,7 +570,8 @@ static String last;
                         ScanCellsPtr &scancells) {
       // no results from the primary table, or LIMIT/CELL_LIMIT exceeded? 
       // then return immediately
-      if ((scancells->get_eos() && scancells->empty()) || m_limits_reached) {
+      if ((scancells->get_eos() && scancells->empty() &&
+           m_last_rowkey_verify.empty()) || m_limits_reached) {
         sspecs_clear();
         m_eos = true;
         return;
@@ -584,9 +581,7 @@ static String last;
 
       Cells cells;
       scancells->get(cells);
-      const char *last = m_last_rowkey_verify.size() 
-                       ? m_last_rowkey_verify.c_str() 
-                       : "";
+      const char *last = m_last_rowkey_verify.c_str();
 
       // this test code creates one ScanSpec for each single row that is 
       // received from the temporary table. As soon as the scan spec queue
@@ -637,20 +632,53 @@ static String last;
         ssb->add_column(s.c_str());
       ssb->set_max_versions(primary_spec.max_versions);
       ssb->set_return_deletes(primary_spec.return_deletes);
+      ssb->set_keys_only(primary_spec.keys_only);
       if (primary_spec.value_regexp)
         ssb->set_value_regexp(primary_spec.value_regexp);
+
+      uint32_t matching;
 
       // foreach_ht cell from the secondary index: verify that it exists in
       // the primary table, but make sure that each rowkey is only inserted
       // ONCE
-      foreach_ht (Cell &cell, cells) {
-        if (!strcmp(last, (const char *)cell.row_key))
-          continue;
-        last = (const char *)cell.row_key;
+      if (primary_spec.and_column_predicates) {
+        foreach_ht (Cell &cell, cells) {
 
-        // then add the key to the ScanSpec
-        ssb->add_row(cell.row_key);
-      } 
+          HT_ASSERT(cell.value_len == sizeof(matching));
+          memcpy(&matching, cell.value, sizeof(matching));
+
+          if (!strcmp(last, (const char *)cell.row_key)) {
+            m_cur_matching |= matching;
+            continue;
+          }
+
+          // then add the key to the ScanSpec
+          if (m_cur_matching == m_all_matching)
+            ssb->add_row(last);
+
+          last = (const char *)cell.row_key;
+
+          m_cur_matching = matching;
+        }
+        if (scancells->get_eos() && m_cur_matching == m_all_matching) {
+          m_cur_matching = 0;
+          ssb->add_row(last);
+          last = "";
+        }
+      }
+      else {
+        foreach_ht (Cell &cell, cells) {
+          if (!strcmp(last, (const char *)cell.row_key))
+            continue;
+          // then add the key to the ScanSpec
+          ssb->add_row(last);
+          last = (const char *)cell.row_key;
+        }
+        if (scancells->get_eos()) {
+          ssb->add_row(last);
+          last = "";
+        }
+      }
  
       // store the "last" pointer before it goes out of scope
       m_last_rowkey_verify = last;
@@ -660,7 +688,7 @@ static String last;
         m_sspecs_cond.wait(lock);
 
       // if, in the meantime, we reached any CELL_LIMIT/ROW_LIMIT then return
-      if (m_limits_reached) { 
+      if (m_limits_reached || ssb->get().row_intervals.empty()) { 
         delete ssb;
         return;
       }
@@ -909,9 +937,15 @@ static String last;
 
     // temporary storage to persist pointer data before it goes out of scope
     String m_last_rowkey_verify;
-
+    
     // temporary storage to persist pointer data before it goes out of scope
     String m_last_rowkey_tracking;
+
+    // Carry-over matching bits for last key
+    uint32_t m_cur_matching;
+
+    // Bit-pattern for all matching predicates
+    uint32_t m_all_matching;
 
     // true if this index is a qualifier index
     bool m_qualifier_scan;

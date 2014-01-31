@@ -52,6 +52,7 @@ ScanContext::initialize(int64_t rev, const ScanSpec *ss,
   String family;
   const char *qualifier;
   size_t qualifier_len;
+  size_t id = 0;
   bool is_regexp, is_prefix;
 
   boost::xtime_get(&xtnow, boost::TIME_UTC_);
@@ -102,7 +103,7 @@ ScanContext::initialize(int64_t rev, const ScanSpec *ss,
              ColumnPredicate::QUALIFIER_EXACT_MATCH);
           cp.column_qualifier = qualifier;
           cp.column_qualifier_len = qualifier_len;
-          cell_predicates[cf->id].add_column_predicate(cp);
+          cell_predicates[cf->id].add_column_predicate(cp, id++);
         }
 
         if (cf->ttl == 0)
@@ -391,7 +392,7 @@ ScanContext::initialize(int64_t rev, const ScanSpec *ss,
         if (cf->counter) {
           HT_THROW(Error::BAD_SCAN_SPEC, "Counters are not supported for column predicates" );
         }
-        cell_predicates[cf->id].add_column_predicate(cp);
+        cell_predicates[cf->id].add_column_predicate(cp, id++);
         cell_predicates[cf->id].indexed = cf->has_index || cf->has_qualifier_index;
       }
     }

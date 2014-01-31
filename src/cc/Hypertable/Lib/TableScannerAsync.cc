@@ -149,6 +149,7 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
 
   // for value prefix queries we require normal indicies for ALL scanned columns
   if (!primary_spec.column_predicates.empty()) {
+    size_t id = 0;
 
     foreach_ht (const ColumnPredicate &cp, primary_spec.column_predicates) {
 
@@ -186,7 +187,7 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
         *index_row_buf.ptr = 0;
         HT_ASSERT(index_row_buf.fill() < index_row_buf.size);
         add_index_row(index_spec, (const char *)index_row_buf.base);
-        cell_predicates[cf->id].add_column_predicate(cp);
+        cell_predicates[cf->id].add_column_predicate(cp, id++);
       }
       else if ((cp.operation & ColumnPredicate::EXACT_MATCH) ||
                (cp.operation & ColumnPredicate::PREFIX_MATCH)) {
@@ -211,7 +212,7 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
         *index_row_buf.ptr = 0;
         HT_ASSERT(index_row_buf.fill() < index_row_buf.size);
         add_index_row(index_spec, (const char *)index_row_buf.base);
-        cell_predicates[cf->id].add_column_predicate(cp);
+        cell_predicates[cf->id].add_column_predicate(cp, id++);
       }
       else if (cp.operation & ColumnPredicate::QUALIFIER_REGEX_MATCH) {
         if (Regex::extract_prefix(cp.column_qualifier, cp.column_qualifier_len,
@@ -221,7 +222,7 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
           index_row_prefix = format("%d,", (int)cf->id);
           index_row_prefix.append(prefix, prefix_len);
           add_index_row(index_spec, index_row_prefix.c_str());
-          cell_predicates[cf->id].add_column_predicate(cp);
+          cell_predicates[cf->id].add_column_predicate(cp, id++);
         }
         else
           return false;
@@ -240,7 +241,7 @@ bool TableScannerAsync::use_index(TablePtr table, const ScanSpec &primary_spec,
         if (cp.operation & ColumnPredicate::QUALIFIER_EXACT_MATCH)
           index_row_prefix.append("\t", 1);
         add_index_row(index_spec, index_row_prefix.c_str());
-        cell_predicates[cf->id].add_column_predicate(cp);        
+        cell_predicates[cf->id].add_column_predicate(cp, id++);
       }
       else
         return false;

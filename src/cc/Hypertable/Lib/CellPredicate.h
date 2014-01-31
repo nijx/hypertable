@@ -77,8 +77,7 @@ namespace Hypertable {
 
     /// Default constructor.
     CellPredicate() :
-      cutoff_time(0), max_versions(0), next_id(0),
-      counter(false), indexed(false) { }
+      cutoff_time(0), max_versions(0), counter(false), indexed(false) { }
 
     void all_matches(const char *qualifier, size_t qualifier_len,
                      const char* value, size_t value_len,
@@ -158,8 +157,8 @@ namespace Hypertable {
       return true;
     }
 
-    void add_column_predicate(const ColumnPredicate &column_predicate) {
-      patterns.push_back(CellPattern(column_predicate, next_id++));
+    void add_column_predicate(const ColumnPredicate &column_predicate, size_t id) {
+      patterns.push_back(CellPattern(column_predicate, id));
     }
 
     /// TTL cutoff time
@@ -167,9 +166,6 @@ namespace Hypertable {
 
     /// Max versions (0 for all versions)
     uint32_t max_versions;
-
-    /// Next pattern identifier
-    size_t next_id;
 
     /// Column family has counter option
     bool counter;
