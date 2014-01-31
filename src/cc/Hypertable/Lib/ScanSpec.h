@@ -154,12 +154,12 @@ typedef std::vector<ColumnPredicate, ColumnPredicateAlloc> ColumnPredicates;
 class ScanSpec {
 public:
   ScanSpec()
-    : row_limit(0), cell_limit(0), cell_limit_per_family(0), 
-      row_offset(0), cell_offset(0), max_versions(0),
-      time_interval(TIMESTAMP_MIN, TIMESTAMP_MAX),
-      return_deletes(false), keys_only(false),
-      row_regexp(0), value_regexp(0), scan_and_filter_rows(false),
-      do_not_cache(false) { }
+    : row_limit(0), cell_limit(0), cell_limit_per_family(0), row_offset(0),
+      cell_offset(0), max_versions(0),
+      time_interval(TIMESTAMP_MIN, TIMESTAMP_MAX), row_regexp(0),
+      value_regexp(0), return_deletes(false), keys_only(false),
+      scan_and_filter_rows(false), do_not_cache(false),
+      and_column_predicates(false) { }
   ScanSpec(CharArena &arena)
     : row_limit(0), cell_limit(0), cell_limit_per_family(0), 
       row_offset(0), cell_offset(0), max_versions(0), columns(CstrAlloc(arena)),
@@ -167,9 +167,10 @@ public:
       cell_intervals(CellIntervalAlloc(arena)),
       column_predicates(ColumnPredicateAlloc(arena)),
       time_interval(TIMESTAMP_MIN, TIMESTAMP_MAX),
+      row_regexp(0), value_regexp(0),
       return_deletes(false), keys_only(false),
-      row_regexp(0), value_regexp(0), scan_and_filter_rows(false),
-      do_not_cache(false) { }
+      scan_and_filter_rows(false),
+      do_not_cache(false), and_column_predicates(false) { }
   ScanSpec(CharArena &arena, const ScanSpec &);
   ScanSpec(const uint8_t **bufp, size_t *remainp) { decode(bufp, remainp); }
 
@@ -196,6 +197,7 @@ public:
     value_regexp = 0;
     scan_and_filter_rows = false;
     do_not_cache = false;
+    and_column_predicates = false;
   }
 
   /** 
@@ -225,6 +227,7 @@ public:
     other.scan_and_filter_rows = scan_and_filter_rows;
     other.do_not_cache = do_not_cache;
     other.column_predicates = column_predicates;
+    other.and_column_predicates = and_column_predicates;
   }
 
   bool cacheable() {
@@ -375,12 +378,13 @@ public:
   CellIntervals cell_intervals;
   ColumnPredicates column_predicates;
   std::pair<int64_t,int64_t> time_interval;
-  bool return_deletes;
-  bool keys_only;
   const char *row_regexp;
   const char *value_regexp;
+  bool return_deletes;
+  bool keys_only;
   bool scan_and_filter_rows;
   bool do_not_cache;
+  bool and_column_predicates;
 };
 
 /**
@@ -594,6 +598,13 @@ public:
    */
   void set_do_not_cache(bool val) {
     m_scan_spec.do_not_cache = val;
+  }
+
+  /**
+   * AND together the column predicates.
+   */
+  void set_and_column_predicates(bool val) {
+    m_scan_spec.and_column_predicates = val;
   }
 
   /**
