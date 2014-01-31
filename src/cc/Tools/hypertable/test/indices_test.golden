@@ -713,7 +713,7 @@ row2	a	cella2
 DROP TABLE IF EXISTS t;
 CREATE TABLE t (a TIME_ORDER DESC MAX_VERSIONS=1, INDEX a);
 DESCRIBE TABLE "^t";
-<Schema>
+<Schema version="1">
   <AccessGroup name="default">
     <ColumnFamily>
       <Name>v1</Name>
@@ -737,7 +737,7 @@ row2	a	cellc0
 DROP TABLE IF EXISTS t;
 CREATE TABLE t (a, INDEX a, b, INDEX b);
 DESCRIBE TABLE "^t";
-<Schema>
+<Schema version="1">
   <AccessGroup name="default">
     <ColumnFamily>
       <Name>v1</Name>

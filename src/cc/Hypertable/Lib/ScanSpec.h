@@ -342,6 +342,13 @@ public:
   void add_column_predicate(CharArena &arena, const char *column_family,
                             const char *column_qualifier, uint32_t operation,
                             const char *value, uint32_t value_len = 0) {
+
+    // As soon as we're building with C++11 and can replace the bitset<32> in
+    // the CellPredicate class with bitset<64>, then we should change the
+    // following expression to check for size of 64
+    if (column_predicates.size() == 32)
+      HT_THROW(Error::FAILED_EXPECTATION, "Column predicate limit of 32 has been exceeded!");
+
     ColumnPredicate cp;
     cp.column_family = arena.dup(column_family);
     cp.column_qualifier = arena.dup(column_qualifier);

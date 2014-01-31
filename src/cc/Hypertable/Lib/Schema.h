@@ -130,6 +130,7 @@ namespace Hypertable {
     void set_version(const char *version_str);
     void set_max_column_family_id(const char *generation);
     uint32_t get_generation() const { return m_generation; }
+    uint32_t get_version() const { return m_version; }
 
     size_t get_max_column_family_id() { return m_max_column_family_id; }
     void incr_max_column_family_id() {++m_max_column_family_id; }

@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -292,7 +292,6 @@ static String last;
     void collect_indices(TableScannerAsync *scanner, ScanCellsPtr &scancells) {
       const ScanSpec &primary_spec = m_primary_spec.get();
       // split the index row into column id, cell value and cell row key
-      size_t old_inserted_keys = m_tmp_keys.size();
       Cells cells;
       const char *unescaped_row;
       const char *unescaped_qualifier;
@@ -426,11 +425,6 @@ static String last;
         m_tmp_cutoff += sizeof(KeySpec) + key.row_len + key.column_qualifier_len;
       }
 
-      // if the temporary table was not yet created: make sure that the keys
-      // don't point to invalid memory
-      if (!m_mutator && m_tmp_keys.size() > old_inserted_keys)
-        m_scancells_buffer.push_back(scancells);
-
       // reached EOS? then flush the mutator
       if (scancells->get_eos()) {
         if (m_mutator) {
@@ -456,7 +450,7 @@ static String last;
         // keys. they're no longer required
         if (m_tmp_table) {
           m_tmp_keys.clear();
-          m_scancells_buffer.clear();
+          m_strings.clear();
         }
 
         return;
@@ -533,7 +527,7 @@ static String last;
 
         // clean up
         m_tmp_keys.clear();
-        m_scancells_buffer.clear();
+        m_strings.clear();
       }
 
       m_scanners.push_back(s);
@@ -959,10 +953,6 @@ static String last;
     // accumulator; if > TMP_CUTOFF then store all index results in a
     // temporary table
     size_t m_tmp_cutoff;
-
-    // stores the ScanCells; otherwise keys in m_tmp_keys can point to 
-    // invalid memory
-    std::vector<ScanCellsPtr> m_scancells_buffer;
 
     // keep track whether we called final_decrement() 
     bool m_final_decrement;
