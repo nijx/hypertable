@@ -83,22 +83,29 @@ namespace Hypertable {
   ///   if (!garbage_tracker.collection_needed(total, garbage))
   ///     abort_compaction();
   /// }
-  /// 
-  /// // Perform the actual compaction
-  /// // %MergeScanner *mscanner = new %MergeScannerAccessGroup ...
-  /// // ...
-  /// 
-  /// if (compaction_type == GC)
-  ///   garbage_tracker.adjust_targets(now, mscanner);
   /// </pre>
-  /// At this point in the compaction routine, after the call to
-  /// adjust_targets(), it is safe to drop the immutable cache or merge it back
-  /// into the regular cache as is the case with <i>in memory</i> compactions.
-  /// At the end of the compaction routine, once the set of cell stoes has been
-  /// updated, the update_cellstore_info() routine must be called to properly
-  /// update the state of the garbage tracker.  For example:
+  /// The next step of the compaction routine is to perform the compaction:
   /// <pre>
-  /// garbage_tracker.update_cellstore_info(stores, now, compaction_type == GC);
+  /// %MergeScanner *mscanner = new %MergeScannerAccessGroup ...
+  /// while (scanner->get(key, value)) {
+  ///   ...
+  ///   scanner->forward();
+  /// }
+  /// </pre>
+  /// At this point, the merge scanner should be passed into adjust_targets() to
+  /// adjust the targets based on the statistics collected during the merge:
+  /// <pre>
+  /// garbage_tracker.adjust_targets(now, mscanner);
+  /// </pre>
+  /// Finally, in the compaction routine, after the call to adjust_targets(), it
+  /// is safe to drop the immutable cache or merge it back into the regular
+  /// cache as is the case with <i>in memory</i> compactions.  At the end of the
+  /// compaction routine, once the set of cell stores has been updated, the
+  /// update_cellstore_info() routine must be called to properly update the
+  /// state of the garbage tracker.  For example:
+  /// <pre>
+  /// bool gc_compaction = (mscanner->get_flags() & MergeScanner::RETURN_DELETES) == 0;
+  /// garbage_tracker.update_cellstore_info(stores, now, gc_compaction);
   /// </pre>
   class AccessGroupGarbageTracker {
   public:
@@ -190,9 +197,12 @@ namespace Hypertable {
     void adjust_targets(time_t now, double total, double garbage);
 
     /// Adjusts targets using statistics from a merge scanner used in a GC
-    /// compaction.  This member function retrieves the i/o statistics
-    /// from <code>mscanner</code> to determine the overall size and amount of
-    /// garbage removed during the merge scan and then calls @ref adjust_targets
+    /// compaction.  This member function first checks mscanner to see if it
+    /// was a GC compaction by checking its flags for the absence of the
+    /// MergeScanner::RETURN_DELETES, flag and if so, it retrieves the i/o
+    /// statistics from <code>mscanner</code> to determine the overall size and
+    /// amount of garbage removed during the merge scan and then calls
+    /// @ref adjust_targets
     /// @param now Current time to be used in elapsed time calculation
     /// @param mscanner Merge scanner used in a GC compaction
     void adjust_targets(time_t now, MergeScanner *mscanner);

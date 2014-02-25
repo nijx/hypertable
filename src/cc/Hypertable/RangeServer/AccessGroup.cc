@@ -656,6 +656,8 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
       scanner->forward();
     }
 
+    m_garbage_tracker.adjust_targets(now, mscanner);
+
     CellStoreTrailerV6 *trailer = dynamic_cast<CellStoreTrailerV6 *>(cellstore->get_trailer());
 
     if (major)
@@ -712,7 +714,6 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
       else {
 
         if (m_in_memory) {
-          m_garbage_tracker.adjust_targets(now, mscanner);
           m_cell_cache_manager->install_new_immutable_cache(filtered_cache);
           m_cell_cache_manager->merge_caches(m_schema);
           for (size_t i=0; i<m_stores.size(); i++)
@@ -724,9 +725,6 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
           if (minor && Global::enable_shadow_cache &&
               !MaintenanceFlag::purge_shadow_cache(maintenance_flags))
             shadow_cache = m_cell_cache_manager->immutable_cache();
-
-          if (major)
-            m_garbage_tracker.adjust_targets(now, mscanner);
 
           m_cell_cache_manager->drop_immutable_cache();
 

@@ -184,7 +184,7 @@ namespace Hypertable {
       if (!m_in_memory &&
           m_latest_stored_revision > m_latest_stored_revision_hint)
         purge_stored_cells_from_cache();
-      m_garbage_tracker.update_cellstore_info(m_stores);
+      m_garbage_tracker.update_cellstore_info(m_stores, time(0), true);
     }
 
     void measure_garbage(double *total, double *garbage);

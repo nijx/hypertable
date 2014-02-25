@@ -105,9 +105,11 @@ bool AccessGroupGarbageTracker::check_needed(time_t now) {
 
 void
 AccessGroupGarbageTracker::adjust_targets(time_t now, MergeScanner *mscanner) {
-  uint64_t input, output;
-  mscanner->get_io_accounting_data(&input, &output);
-  adjust_targets(now, input, input-output);
+  if (mscanner && (mscanner->get_flags() & MergeScanner::RETURN_DELETES) == 0) {
+    uint64_t input, output;
+    mscanner->get_io_accounting_data(&input, &output);
+    adjust_targets(now, input, input-output);
+  }
 }
 
 void
