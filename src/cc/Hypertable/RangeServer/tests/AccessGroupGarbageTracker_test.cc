@@ -31,6 +31,7 @@
 using namespace Hypertable;
 using namespace Config;
 
+#if 0
 namespace {
 
   const char *schema_str =
@@ -64,6 +65,7 @@ namespace {
   "</Schema>";
 
 }
+#endif
 
 
 int main(int argc, char **argv) {

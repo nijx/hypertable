@@ -22,8 +22,8 @@
 /// @file
 /// Definitions for AccessGroupGarbageTracker.
 /// This file contains type definitions for AccessGroupGarbageTracker, a class
-/// that estimates how much garbage has accumulated in an access group and
-/// signals when collection is needed.
+/// that heuristically estimates how much garbage has accumulated in an access
+/// group and signals when collection is needed.
 
 #include <Common/Compat.h>
 #include "AccessGroupGarbageTracker.h"
@@ -37,6 +37,7 @@
 
 using namespace Hypertable;
 using namespace Config;
+using namespace std;
 
 AccessGroupGarbageTracker::AccessGroupGarbageTracker(PropertiesPtr &props,
                CellCacheManagerPtr &cell_cache_manager, Schema::AccessGroup *ag)
@@ -51,6 +52,7 @@ AccessGroupGarbageTracker::AccessGroupGarbageTracker(PropertiesPtr &props,
 
 
 void AccessGroupGarbageTracker::update_schema(Schema::AccessGroup *ag) {
+  ScopedLock lock(m_mutex);
   m_have_max_versions = false;
   m_min_ttl = m_max_ttl = 0;
   m_in_memory = ag->in_memory;
@@ -71,7 +73,11 @@ void AccessGroupGarbageTracker::update_schema(Schema::AccessGroup *ag) {
   m_elapsed_target_minimum = m_elapsed_target = m_min_ttl/10;
 }
 
-void AccessGroupGarbageTracker::update_cellstore_info(std::vector<CellStoreInfo> &stores) {
+void
+AccessGroupGarbageTracker::update_cellstore_info(vector<CellStoreInfo> &stores,
+                                                 time_t t,
+                                                 bool collection_performed) {
+  ScopedLock lock(m_mutex);
   m_stored_deletes = 0;
   m_stored_expirable = 0;
   m_current_disk_usage = 0;
@@ -82,15 +88,16 @@ void AccessGroupGarbageTracker::update_cellstore_info(std::vector<CellStoreInfo>
   }
   if (m_in_memory)
     m_current_disk_usage = m_cell_cache_manager->logical_size();
+  if (collection_performed) {
+    m_last_collection_time = (t==0) ? time(0) : t;
+    m_last_collection_disk_usage = m_current_disk_usage;
+  }
 }
 
-void AccessGroupGarbageTracker::reset(time_t t) {
-  m_last_reset_time = t;
-  m_last_reset_disk_usage = m_current_disk_usage;
-}
 
 bool AccessGroupGarbageTracker::check_needed(time_t now) {
-  if (m_last_reset_time)
+  ScopedLock lock(m_mutex);
+  if (m_last_collection_time)
     return check_needed_deletes() || check_needed_ttl(now);
   return false;
 }
@@ -106,11 +113,12 @@ AccessGroupGarbageTracker::adjust_targets(time_t now, MergeScanner *mscanner) {
 void
 AccessGroupGarbageTracker::adjust_targets(time_t now, double total,
                                           double garbage) {
+  ScopedLock lock(m_mutex);
 
-  HT_ASSERT(m_last_reset_time);
+  HT_ASSERT(m_last_collection_time);
 
-  double garbage_pct = garbage / total;
-  bool gc_needed = garbage_pct >= m_garbage_threshold;
+  double garbage_ratio = garbage / total;
+  bool gc_needed = garbage_ratio >= m_garbage_threshold;
   bool check_deletes = check_needed_deletes();
   bool check_ttl = check_needed_ttl(now);
 
@@ -121,9 +129,9 @@ AccessGroupGarbageTracker::adjust_targets(time_t now, double total,
   // Recompute DATA target
   bool have_garbage {m_have_max_versions || compute_delete_count() > 0};
   if (have_garbage && check_deletes != gc_needed) {
-    if (garbage_pct > 0) {
+    if (garbage_ratio > 0) {
       int64_t new_accum_data_target =
-        (total_accumulated_since_reset() * m_garbage_threshold) / garbage_pct;
+        (total_accumulated_since_collection() * m_garbage_threshold) / garbage_ratio;
       if (new_accum_data_target < m_accum_data_target_minimum)
         m_accum_data_target = m_accum_data_target_minimum;
       else if (new_accum_data_target > (m_accum_data_target*2))
@@ -135,9 +143,9 @@ AccessGroupGarbageTracker::adjust_targets(time_t now, double total,
 
   // Recompute ELAPSED target
   if (m_min_ttl > 0 && check_ttl != gc_needed) {
-    if (garbage_pct > 0) {
+    if (garbage_ratio > 0) {
       time_t new_elapsed_target = 
-        ((now-m_last_reset_time) * m_garbage_threshold) / garbage_pct;
+        ((now-m_last_collection_time) * m_garbage_threshold) / garbage_ratio;
       if (new_elapsed_target < m_elapsed_target_minimum)
         m_elapsed_target = m_elapsed_target_minimum;
       else if (new_elapsed_target > (m_elapsed_target*2))
@@ -148,22 +156,22 @@ AccessGroupGarbageTracker::adjust_targets(time_t now, double total,
   }
 }
 
-int64_t AccessGroupGarbageTracker::memory_accumulated_since_reset() {
+int64_t AccessGroupGarbageTracker::memory_accumulated_since_collection() {
   int64_t accum;
   if (m_cell_cache_manager->immutable_cache())
     accum = m_cell_cache_manager->immutable_cache()->logical_size();
   else
     accum = m_cell_cache_manager->logical_size();
   if (m_in_memory)
-    accum -= m_last_reset_disk_usage;
+    accum -= m_last_collection_disk_usage;
   HT_ASSERT(accum >= 0);
   return accum;
 }
 
-int64_t AccessGroupGarbageTracker::total_accumulated_since_reset() {
-  int64_t accum {memory_accumulated_since_reset()};
-  if (m_current_disk_usage > m_last_reset_disk_usage)
-    accum += m_current_disk_usage - m_last_reset_disk_usage;
+int64_t AccessGroupGarbageTracker::total_accumulated_since_collection() {
+  int64_t accum {memory_accumulated_since_collection()};
+  if (m_current_disk_usage > m_last_collection_disk_usage)
+    accum += m_current_disk_usage - m_last_collection_disk_usage;
   return accum;
 }
 
@@ -178,18 +186,18 @@ int64_t AccessGroupGarbageTracker::compute_delete_count() {
 
 bool AccessGroupGarbageTracker::check_needed_deletes() {
   if ((m_have_max_versions || compute_delete_count() > 0) &&
-      total_accumulated_since_reset() >= m_accum_data_target)
+      total_accumulated_since_collection() >= m_accum_data_target)
     return true;
   return false;
 }
 
 bool AccessGroupGarbageTracker::check_needed_ttl(time_t now) {
-  int64_t memory_accum {memory_accumulated_since_reset()};
+  int64_t memory_accum {memory_accumulated_since_collection()};
   int64_t total_size {m_current_disk_usage + memory_accum};
   double possible_garbage = m_stored_expirable + memory_accum;
-  double possible_garbage_pct = possible_garbage / total_size;
-  time_t elapsed {now - m_last_reset_time};
-  if (m_min_ttl > 0 && possible_garbage_pct >= m_garbage_threshold &&
+  double possible_garbage_ratio = possible_garbage / total_size;
+  time_t elapsed {now - m_last_collection_time};
+  if (m_min_ttl > 0 && possible_garbage_ratio >= m_garbage_threshold &&
       elapsed >= m_elapsed_target)
     return true;
   return false;

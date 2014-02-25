@@ -573,8 +573,7 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
        * compaction.  If GC compaction was requested and garbage threshold
        * is not reached, skip compaction.
        */
-      bool need_garbage_check = m_garbage_tracker.check_needed(now);
-      if (gc || need_garbage_check) {
+      if (gc || m_garbage_tracker.check_needed(now)) {
         double total, garbage;
         measure_garbage(&total, &garbage);
         m_garbage_tracker.adjust_targets(now, total, garbage);
@@ -751,9 +750,7 @@ void AccessGroup::run_compaction(int maintenance_flags, Hints *hints) {
         }
       }
 
-      m_garbage_tracker.update_cellstore_info(m_stores);
-      if (major || m_in_memory)
-        m_garbage_tracker.reset(now);
+      m_garbage_tracker.update_cellstore_info(m_stores, now, major||m_in_memory);
 
       // If compaction included CellCache, recompute latest stored revision
       if (!merging || m_end_merge) {
@@ -969,7 +966,6 @@ AccessGroup::shrink(String &split_row, bool drop_high, Hints *hints) {
     hints->latest_stored_revision = m_latest_stored_revision;
     hints->disk_usage = m_disk_usage;
     m_garbage_tracker.update_cellstore_info(m_stores);
-    m_garbage_tracker.reset(time(0));
 
     m_earliest_cached_revision_saved = TIMESTAMP_MAX;
 
