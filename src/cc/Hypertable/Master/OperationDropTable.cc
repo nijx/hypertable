@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -25,19 +25,20 @@
  * for dropping (removing) a table from the system.
  */
 
-#include "Common/Compat.h"
-#include "Common/Error.h"
-#include "Common/FailureInducer.h"
-#include "Common/ScopeGuard.h"
-#include "Common/Serialization.h"
-
-#include "Hyperspace/Session.h"
-
-#include "Hypertable/Lib/Key.h"
-
-#include "DispatchHandlerOperationDropTable.h"
+#include <Common/Compat.h>
 #include "OperationDropTable.h"
-#include "Utility.h"
+
+#include <Hypertable/Master/DispatchHandlerOperationDropTable.h>
+#include <Hypertable/Master/Utility.h>
+
+#include <Hypertable/Lib/Key.h>
+
+#include <Hyperspace/Session.h>
+
+#include <Common/Error.h>
+#include <Common/FailureInducer.h>
+#include <Common/ScopeGuard.h>
+#include <Common/Serialization.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -45,9 +46,9 @@ using namespace Hypertable;
 using namespace Hyperspace;
 
 OperationDropTable::OperationDropTable(ContextPtr &context, const String &name,
-                                       bool if_exists)
+                                       bool if_exists, TableParts parts)
   : Operation(context, MetaLog::EntityType::OPERATION_DROP_TABLE), m_name(name),
-    m_if_exists(if_exists) {
+    m_if_exists(if_exists), m_parts(parts) {
   initialize_dependencies();
 }
 
@@ -90,8 +91,9 @@ void OperationDropTable::execute() {
   TableIdentifier table;
   int32_t state = get_state();
 
-  HT_INFOF("Entering DropTable-%lld(%s) state=%s",
-           (Lld)header.id, m_name.c_str(), OperationState::get_text(state));
+  HT_INFOF("Entering DropTable-%lld(%s, if_exists=%s, parts=%s) state=%s",
+           (Lld)header.id, m_name.c_str(), m_if_exists ? "true" : "false",
+           m_parts.to_string().c_str(), OperationState::get_text(state));
 
   switch (state) {
 
@@ -111,30 +113,37 @@ void OperationDropTable::execute() {
       return;
     }
 
-    // issue another request for an index table
-    if (m_context->namemap->name_to_id(index_name, index_id)) {
-      HT_INFOF("  Dropping index table %s (id %s)", 
-           index_name.c_str(), index_id.c_str());
-      Operation *op = new OperationDropTable(m_context, index_name, false);
-      op->add_obstruction(index_name + "-drop-index");
+    // maybe issue another request for an index table
+    if (m_parts.value_index()) {
+      if (m_context->namemap->name_to_id(index_name, index_id)) {
+        HT_INFOF("  Dropping index table %s (id %s)", 
+                 index_name.c_str(), index_id.c_str());
+        Operation *op =
+          new OperationDropTable(m_context, index_name, false,
+                                 TableParts(TableParts::PRIMARY));
+        op->add_obstruction(index_name + "-drop-index");
 
-      ScopedLock lock(m_mutex);
-      add_dependency(index_name + "-drop-index");
-      m_sub_ops.push_back(op);
+        ScopedLock lock(m_mutex);
+        add_dependency(index_name + "-drop-index");
+        m_sub_ops.push_back(op);
+      }
     }
 
     // ... and for the qualifier index
-    if (m_context->namemap->name_to_id(qualifier_index_name, 
-                qualifier_index_id)) {
-      HT_INFOF("  Dropping qualifier index table %s (id %s)", 
-           qualifier_index_name.c_str(), qualifier_index_id.c_str());
-      Operation *op = new OperationDropTable(m_context, qualifier_index_name, 
-              false);
-      op->add_obstruction(qualifier_index_name + "-drop-qualifier-index");
+    if (m_parts.qualifier_index()) {
+      if (m_context->namemap->name_to_id(qualifier_index_name, 
+                                         qualifier_index_id)) {
+        HT_INFOF("  Dropping qualifier index table %s (id %s)", 
+                 qualifier_index_name.c_str(), qualifier_index_id.c_str());
+        Operation *op =
+          new OperationDropTable(m_context, qualifier_index_name,
+                                 false, TableParts(TableParts::PRIMARY));
+        op->add_obstruction(qualifier_index_name + "-drop-qualifier-index");
 
-      ScopedLock lock(m_mutex);
-      add_dependency(qualifier_index_name + "-drop-qualifier-index");
-      m_sub_ops.push_back(op);
+        ScopedLock lock(m_mutex);
+        add_dependency(qualifier_index_name + "-drop-qualifier-index");
+        m_sub_ops.push_back(op);
+      }
     }
 
     set_state(OperationState::UPDATE_HYPERSPACE);
@@ -144,6 +153,10 @@ void OperationDropTable::execute() {
     break;
 
   case OperationState::UPDATE_HYPERSPACE:
+    if (!m_parts.primary()) {
+      complete_ok();
+      break;
+    }
     try {
       m_context->namemap->drop_mapping(m_name);
       filename = m_context->toplevel_dir + "/tables/" + m_id;
@@ -231,7 +244,7 @@ void OperationDropTable::display_state(std::ostream &os) {
   os << " name=" << m_name << " id=" << m_id << " ";
 }
 
-#define OPERATION_DROP_TABLE_VERSION 2
+#define OPERATION_DROP_TABLE_VERSION 3
 
 uint16_t OperationDropTable::encoding_version() const {
   return OPERATION_DROP_TABLE_VERSION;
@@ -246,6 +259,7 @@ size_t OperationDropTable::encoded_state_length() const {
   length += 4;
   foreach_ht (const String &location, m_servers)
     length += Serialization::encoded_length_vstr(location);
+  length += m_parts.encoded_length();
   return length;
 }
 
@@ -259,6 +273,7 @@ void OperationDropTable::encode_state(uint8_t **bufp) const {
   Serialization::encode_i32(bufp, m_servers.size());
   foreach_ht (const String &location, m_servers)
     Serialization::encode_vstr(bufp, location);
+  m_parts.encode(bufp);
 }
 
 void OperationDropTable::decode_state(const uint8_t **bufp, size_t *remainp) {
@@ -271,6 +286,8 @@ void OperationDropTable::decode_state(const uint8_t **bufp, size_t *remainp) {
     length = Serialization::decode_i32(bufp, remainp);
     for (size_t i=0; i<length; i++)
       m_servers.insert( Serialization::decode_vstr(bufp, remainp) );
+    if (m_decode_version >= 3)
+      m_parts.decode(bufp, remainp);
   }
 }
 

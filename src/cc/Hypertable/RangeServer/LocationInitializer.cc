@@ -41,13 +41,10 @@
 using namespace Hypertable;
 using namespace Serialization;
 
-LocationInitializer::LocationInitializer(PropertiesPtr &props,
-                                         ServerStatePtr server_state)
-  : m_props(props), m_server_state(server_state), 
-    m_location_persisted(false), m_handshake_complete(false),
-    m_lock_held(false) {
+LocationInitializer::LocationInitializer(std::shared_ptr<Context> &context)
+  : m_context(context) {
 
-  Path data_dir = m_props->get_str("Hypertable.DataDirectory");
+  Path data_dir = m_context->props->get_str("Hypertable.DataDirectory");
   data_dir /= "/run";
   if (!FileUtils::exists(data_dir.string()))
     FileUtils::mkdirs(data_dir.string());
@@ -55,12 +52,12 @@ LocationInitializer::LocationInitializer(PropertiesPtr &props,
 
   // Get location string
   {
-    m_location = m_props->get_str("Hypertable.RangeServer.ProxyName");
+    m_location = m_context->props->get_str("Hypertable.RangeServer.ProxyName");
     if (!m_location.empty()) {
       boost::trim(m_location);
       if (m_location == "*") {
         char location_hash[33];
-        uint16_t port = m_props->get_i16("Hypertable.RangeServer.Port");
+        uint16_t port = m_context->props->get_i16("Hypertable.RangeServer.Port");
         md5_string(format("%s:%u", System::net_info().host_name.c_str(), port).c_str(), location_hash);
         m_location = format("rs-%s", String(location_hash).substr(0, 8).c_str());
       }
@@ -101,8 +98,8 @@ CommBuf *LocationInitializer::create_initialization_request() {
   ScopedLock lock(m_mutex);
   StatsSystem stats;
   const char *base, *ptr;
-  String datadirs = m_props->get_str("Hypertable.RangeServer.Monitoring.DataDirectories");
-  uint16_t port = m_props->get_i16("Hypertable.RangeServer.Port");
+  String datadirs = m_context->props->get_str("Hypertable.RangeServer.Monitoring.DataDirectories");
+  uint16_t port = m_context->props->get_i16("Hypertable.RangeServer.Port");
   String dir;
   std::vector<String> dirs;
 
@@ -149,7 +146,7 @@ bool LocationInitializer::process_initialization_response(Event *event) {
   SystemVariable::decode_specs(specs, &ptr, &remain);
 
   // Update server state
-  m_server_state->set(generation, specs);
+  m_context->server_state->set(generation, specs);
 
   {
     ScopedLock lock(m_mutex);

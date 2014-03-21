@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,28 +19,30 @@
  * 02110-1301, USA.
  */
 
-#ifndef HYPERTABLE_UPDATETHREAD_H
-#define HYPERTABLE_UPDATETHREAD_H
+#ifndef Hypertable_RangeServer_Context_h
+#define Hypertable_RangeServer_Context_h
 
-#include "Common/Thread.h"
+#include <Hypertable/RangeServer/ServerState.h>
+#include <Hypertable/RangeServer/TableInfoMap.h>
 
-#include "RangeServer.h"
+#include <AsyncComm/Comm.h>
+
+#include <Common/Properties.h>
+
+#include <memory>
 
 namespace Hypertable {
 
-  /**
-   */
-  class UpdateThread {
+  class Context {
   public:
-    UpdateThread(RangeServer *range_server, int seqnum) : m_range_server(range_server), m_sequence_number(seqnum) { }
-    void operator()();
-
-  private:
-    RangeServer *m_range_server;
-    int m_sequence_number;
+    PropertiesPtr props;
+    Comm *comm {};
+    std::shared_ptr<ServerState> server_state;
+    TableInfoMapPtr live_map;
   };
 
+  typedef std::shared_ptr<Context> ContextPtr;
 
-} // namespace Hypertable
+}
 
-#endif // HYPERTABLE_UPDATETHREAD_H
+#endif // Hypertable_RangeServer_Context_h

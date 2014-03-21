@@ -388,4 +388,10 @@ String root_range_location(ContextPtr &context) {
   return location;
 }
 
+void canonicalize_pathname(std::string &pathname) {
+  boost::trim_if(pathname, boost::is_any_of("/ "));
+  if (!pathname.empty())
+    pathname = String("/") + pathname;
+}
+
 }}

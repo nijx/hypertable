@@ -1,5 +1,5 @@
-/*
- * Copyright (C) 2007-2013 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -26,10 +26,12 @@
 #ifndef HYPERTABLE_RANGESERVER_H
 #define HYPERTABLE_RANGESERVER_H
 
+#include <Hypertable/RangeServer/Context.h>
 #include <Hypertable/RangeServer/Global.h>
 #include <Hypertable/RangeServer/GroupCommitInterface.h>
 #include <Hypertable/RangeServer/GroupCommitTimerHandler.h>
 #include <Hypertable/RangeServer/LoadStatistics.h>
+#include <Hypertable/RangeServer/LogReplayBarrier.h>
 #include <Hypertable/RangeServer/MaintenanceScheduler.h>
 #include <Hypertable/RangeServer/MetaLogEntityRange.h>
 #include <Hypertable/RangeServer/PhantomRangeMap.h>
@@ -40,10 +42,10 @@
 #include <Hypertable/RangeServer/ResponseCallbackGetStatistics.h>
 #include <Hypertable/RangeServer/ResponseCallbackPhantomUpdate.h>
 #include <Hypertable/RangeServer/ResponseCallbackUpdate.h>
-#include <Hypertable/RangeServer/ServerState.h>
 #include <Hypertable/RangeServer/TableInfo.h>
 #include <Hypertable/RangeServer/TableInfoMap.h>
 #include <Hypertable/RangeServer/TimerHandler.h>
+#include <Hypertable/RangeServer/UpdatePipeline.h>
 
 #include <Hypertable/Lib/Cells.h>
 #include <Hypertable/Lib/MasterClient.h>
@@ -71,8 +73,7 @@ namespace Hypertable {
   using namespace Hyperspace;
 
   class ConnectionHandler;
-  class TableUpdate;
-  class UpdateThread;
+  class UpdateRecTable;
 
   /// @defgroup RangeServer RangeServer
   /// @ingroup Hypertable
@@ -110,7 +111,7 @@ namespace Hypertable {
     void update(ResponseCallbackUpdate *cb, uint64_t cluster_id,
                 const TableIdentifier *table, uint32_t count,
                 StaticBuffer &buffer, uint32_t flags);
-    void batch_update(std::vector<TableUpdate *> &updates, boost::xtime expire_time);
+    void batch_update(std::vector<UpdateRecTable *> &updates, boost::xtime expire_time);
 
     void commit_log_sync(ResponseCallback *cb, uint64_t cluster_id,
                          const TableIdentifier *table);
@@ -164,6 +165,20 @@ namespace Hypertable {
                    std::vector<SystemVariable::Spec> &specs,
                    uint64_t generation);
 
+    /// Enables maintenance for a table.
+    /// @param cb Response callback
+    /// @param table %Table identifier
+    void table_maintenance_enable(ResponseCallback *cb,
+                                  const TableIdentifier *table);
+
+    /// Disables maintenance for a table.
+    /// This function disables maintenance for the table identified by
+    /// <code>table</code> and waits for any in progress maintenance on any of
+    /// the table's ranges to complete.
+    /// @param cb Response callback
+    /// @param table %Table identifier
+    void table_maintenance_disable(ResponseCallback *cb,
+                                   const TableIdentifier *table);
 
     /**
      * Blocks while the maintenance queue is non-empty
@@ -182,14 +197,9 @@ namespace Hypertable {
 
     void master_change();
 
-    bool wait_for_recovery_finish(boost::xtime expire_time);
-    bool wait_for_root_recovery_finish(boost::xtime expire_time);
-    bool wait_for_metadata_recovery_finish(boost::xtime expire_time);
-    bool wait_for_system_recovery_finish(boost::xtime expire_time);
-    bool wait_for_recovery_finish(const TableIdentifier *table,
-                                  const RangeSpec *range,
-                                  boost::xtime expire_time);
-    bool replay_finished() { return m_replay_finished; }
+    bool replay_finished() {
+      return m_log_replay_barrier->user_complete();
+    }
 
     void shutdown();
 
@@ -199,14 +209,6 @@ namespace Hypertable {
         m_profile_query_out << line << "\n";
       }
     }
-
-  protected:
-
-    friend class UpdateThread;
-
-    void update_qualify_and_transform();
-    void update_commit();
-    void update_add_and_respond();
 
   private:
 
@@ -221,9 +223,6 @@ namespace Hypertable {
     void replay_log(TableInfoMap &replay_map, CommitLogReaderPtr &log_reader);
 
     void verify_schema(TableInfoPtr &, uint32_t generation, const TableSchemaMap *table_schemas=0);
-    void transform_key(ByteString &bskey, DynamicBuffer *dest_bufp,
-                       int64_t revision, int64_t *revisionp,
-                       bool timeorder_desc);
 
     bool live(const vector<QualifiedRangeSpec> &ranges);
     bool live(const QualifiedRangeSpec &spec);
@@ -243,63 +242,18 @@ namespace Hypertable {
       return old_value;
     }
 
-    class UpdateContext {
-    public:
-      UpdateContext(std::vector<TableUpdate *> &tu, boost::xtime xt) : updates(tu), expire_time(xt),
-          total_updates(0), total_added(0), total_syncs(0), total_bytes_added(0) { }
-      ~UpdateContext() {
-        foreach_ht(TableUpdate *u, updates)
-          delete u;
-      }
-      std::vector<TableUpdate *> updates;
-      boost::xtime expire_time;
-      int64_t auto_revision;
-      SendBackRec send_back;
-      DynamicBuffer root_buf;
-      int64_t last_revision;
-      uint32_t total_updates;
-      uint32_t total_added;
-      uint32_t total_syncs;
-      uint64_t total_bytes_added;
-      boost::xtime start_time;
-      uint32_t qualify_time;
-      uint32_t commit_time;
-      uint32_t add_time;
-    };
-
-    Mutex                      m_update_qualify_queue_mutex;
-    boost::condition           m_update_qualify_queue_cond;
-    std::list<UpdateContext *> m_update_qualify_queue;
-    Mutex                      m_update_commit_queue_mutex;
-    boost::condition           m_update_commit_queue_cond;
-    int32_t                    m_update_commit_queue_count;
-    std::list<UpdateContext *> m_update_commit_queue;
-    Mutex                      m_update_response_queue_mutex;
-    boost::condition           m_update_response_queue_cond;
-    std::list<UpdateContext *> m_update_response_queue;
-    std::vector<Thread *>      m_update_threads;
-
-    Mutex                  m_mutex;
-    boost::condition       m_root_replay_finished_cond;
-    boost::condition       m_metadata_replay_finished_cond;
-    boost::condition       m_system_replay_finished_cond;
-    boost::condition       m_replay_finished_cond;
-    bool                   m_root_replay_finished;
-    bool                   m_metadata_replay_finished;
-    bool                   m_system_replay_finished;
-    bool                   m_replay_finished;
+    Mutex m_mutex;
+    ContextPtr m_context;
+    LogReplayBarrierPtr m_log_replay_barrier;
+    UpdatePipelinePtr m_update_pipeline;
     Mutex                  m_stats_mutex;
     PropertiesPtr          m_props;
     bool                   m_verbose;
     bool                   m_shutdown;
-    Comm                  *m_comm;
-    TableInfoMapPtr        m_live_map;
     typedef map<String, PhantomRangeMapPtr> FailoverPhantomRangeMap;
     FailoverPhantomRangeMap m_failover_map;
     Mutex                  m_failover_mutex;
 
-    /// Pointer to ServerState object
-    ServerStatePtr         m_server_state;
     ConnectionManagerPtr   m_conn_manager;
     ApplicationQueuePtr    m_app_queue;
     uint64_t               m_existence_file_handle;
@@ -308,10 +262,8 @@ namespace Hypertable {
     MasterClientPtr        m_master_client;
     Hyperspace::SessionPtr m_hyperspace;
     uint32_t               m_scanner_ttl;
-    int32_t                m_max_clock_skew;
     uint64_t               m_bytes_loaded;
     uint64_t               m_log_roll_limit;
-    uint64_t               m_update_coalesce_limit;
 
     StatsRangeServerPtr    m_stats;
     LoadStatisticsPtr      m_load_statistics;
@@ -326,9 +278,7 @@ namespace Hypertable {
     TimerHandlerPtr        m_timer_handler;
     GroupCommitInterfacePtr m_group_commit;
     GroupCommitTimerHandlerPtr m_group_commit_timer_handler;
-    uint32_t               m_update_delay;
-    QueryCache            *m_query_cache;
-    int64_t                m_last_revision;
+    QueryCachePtr m_query_cache;
     int64_t                m_scanner_buffer_size;
     time_t                 m_last_metrics_update;
     time_t                 m_next_metrics_update;
@@ -338,7 +288,6 @@ namespace Hypertable {
     LoadFactors            m_load_factors;
     size_t                 m_metric_samples;
     size_t                 m_cores;
-    int32_t                m_maintenance_pause_interval;
     Mutex                  m_pending_metrics_mutex;
     CellsBuilder          *m_pending_metrics_updates;
     boost::xtime           m_last_control_file_check;

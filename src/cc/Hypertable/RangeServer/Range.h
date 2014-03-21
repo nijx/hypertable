@@ -322,6 +322,12 @@ namespace Hypertable {
 
     void remove_original_transfer_log();
 
+    const std::string get_table_id() { return m_table.id; }
+
+    void wait_for_steady_state() {
+      m_metalog_entity->wait_for_state(RangeState::STEADY);
+    }
+
   private:
 
     void initialize();

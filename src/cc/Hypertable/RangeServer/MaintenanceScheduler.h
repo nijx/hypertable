@@ -1,5 +1,5 @@
-/*
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -22,12 +22,15 @@
 #ifndef HYPERTABLE_MAINTENANCESCHEDULER_H
 #define HYPERTABLE_MAINTENANCESCHEDULER_H
 
-#include "Common/ReferenceCount.h"
+#include <Hypertable/RangeServer/MaintenancePrioritizerLogCleanup.h>
+#include <Hypertable/RangeServer/MaintenancePrioritizerLowMemory.h>
+#include <Hypertable/RangeServer/LoadStatistics.h>
+#include <Hypertable/RangeServer/TableInfoMap.h>
 
-#include "MaintenancePrioritizerLogCleanup.h"
-#include "MaintenancePrioritizerLowMemory.h"
-#include "LoadStatistics.h"
-#include "TableInfoMap.h"
+#include <Common/ReferenceCount.h>
+
+#include <mutex>
+#include <set>
 
 namespace Hypertable {
 
@@ -37,6 +40,9 @@ namespace Hypertable {
                          TableInfoMapPtr &live_map);
 
     void schedule();
+
+    void include(const TableIdentifier *table);
+    void exclude(const TableIdentifier *table);
 
     void set_low_memory_mode(bool on) {
       if (on) {
@@ -70,24 +76,26 @@ namespace Hypertable {
     void write_debug_output(boost::xtime now, Ranges &ranges,
                             const String &header_str);
 
+    std::mutex m_mutex;
+    std::set<std::string> m_table_blacklist;
     MaintenanceQueuePtr m_queue;
     TableInfoMapPtr m_live_map;
     MaintenancePrioritizer *m_prioritizer;
     MaintenancePrioritizerLogCleanup m_prioritizer_log_cleanup;
     MaintenancePrioritizerLowMemory  m_prioritizer_low_memory;
-    int32_t m_maintenance_interval;
     boost::xtime m_last_low_memory;
     boost::xtime m_last_check;
     int64_t m_query_cache_memory;
+    int32_t m_maintenance_interval;
     int32_t m_low_memory_limit_percentage;
     int32_t m_merging_delay;
     int32_t m_merges_per_interval;
     int32_t m_move_compactions_per_interval;
     int32_t m_maintenance_queue_worker_count;
-    int32_t m_start_offset;
-    bool m_initialized;
+    int32_t m_start_offset {};
+    bool m_initialized {};
     bool m_low_memory_prioritization;
-    bool m_low_memory_mode;
+    bool m_low_memory_mode {};
   };
 
   typedef intrusive_ptr<MaintenanceScheduler> MaintenanceSchedulerPtr;

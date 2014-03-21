@@ -124,7 +124,7 @@ size_t ScanSpec::encoded_length() const {
   foreach_ht(const CellInterval &ci, cell_intervals) len += ci.encoded_length();
   foreach_ht(const ColumnPredicate &cp, column_predicates) len += cp.encoded_length();
 
-  return len + 8 + 8 + 5;
+  return len + 8 + 8 + 6;
 }
 
 void ScanSpec::encode(uint8_t **bufp) const {
@@ -149,6 +149,7 @@ void ScanSpec::encode(uint8_t **bufp) const {
   encode_bool(bufp, scan_and_filter_rows);
   encode_bool(bufp, do_not_cache);
   encode_bool(bufp, and_column_predicates);
+  encode_bool(bufp, rebuild_indexes);
   encode_vi32(bufp, row_offset);
   encode_vi32(bufp, cell_offset);
 }
@@ -185,6 +186,7 @@ void ScanSpec::decode(const uint8_t **bufp, size_t *remainp) {
     scan_and_filter_rows = decode_bool(bufp, remainp);
     do_not_cache = decode_bool(bufp, remainp);
     and_column_predicates = decode_bool(bufp, remainp);
+    rebuild_indexes = decode_bool(bufp, remainp);
     row_offset = decode_vi32(bufp, remainp);
     cell_offset = decode_vi32(bufp, remainp));
 }
@@ -250,6 +252,7 @@ ostream &Hypertable::operator<<(ostream &os, const ScanSpec &scan_spec) {
   os <<" scan_and_filter_rows=" << scan_spec.scan_and_filter_rows;
   os <<" do_not_cache=" << scan_spec.do_not_cache;
   os <<" and_column_predicates=" << scan_spec.and_column_predicates;
+  os <<" rebuild_indexes=" << scan_spec.rebuild_indexes;
   os <<" row_offset=" << scan_spec.row_offset;
   os <<" cell_offset=" << scan_spec.cell_offset;
 
@@ -294,7 +297,8 @@ ScanSpec::ScanSpec(CharArena &arena, const ScanSpec &ss)
     row_regexp(arena.dup(ss.row_regexp)), value_regexp(arena.dup(ss.value_regexp)),
     return_deletes(ss.return_deletes), keys_only(ss.keys_only),
     scan_and_filter_rows(ss.scan_and_filter_rows),
-    do_not_cache(ss.do_not_cache), and_column_predicates(ss.and_column_predicates) {
+    do_not_cache(ss.do_not_cache), and_column_predicates(ss.and_column_predicates),
+    rebuild_indexes(ss.rebuild_indexes) {
   columns.reserve(ss.columns.size());
   row_intervals.reserve(ss.row_intervals.size());
   cell_intervals.reserve(ss.cell_intervals.size());

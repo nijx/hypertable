@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,23 +19,70 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for OperationCreateTable.
+/// This file contains declarations for OperationCreateTable, an Operation class
+/// for creating a table.
+
 #ifndef HYPERTABLE_OPERATIONCREATETABLE_H
 #define HYPERTABLE_OPERATIONCREATETABLE_H
 
-#include "Operation.h"
+#include <Hypertable/Master/Operation.h>
+
+#include <Hypertable/Lib/TableParts.h>
 
 namespace Hypertable {
 
+  /// @addtogroup Master
+  /// @{
+
+  /// Carries out a <i>create table</i> operation.
+  /// This class is responsible for creating a new table, which involves,
+  /// creating the table in Hyperspace, loading the initial range for the table,
+  /// and optionally creating the associated value and qualifier index tables if
+  /// required.
   class OperationCreateTable : public Operation {
   public:
-    OperationCreateTable(ContextPtr &context, const String &name, const String &schema);
-    OperationCreateTable(ContextPtr &context, const MetaLog::EntityHeader &header_);
+
+    /// Constructor.
+    /// Initializes member variables and then calls initialize_dependencies()
+    /// @param context %Master context
+    /// @param name Full pathname of table to create
+    /// @param schema %Table schema
+    /// @param parts Which parts of the table to create
+    OperationCreateTable(ContextPtr &context, const String &name,
+                         const String &schema, TableParts parts);
+
+    /// Constructor for constructing object from %MetaLog entry.
+    /// @param context %Master context
+    /// @param header %MetaLog header
+    OperationCreateTable(ContextPtr &context,
+                         const MetaLog::EntityHeader &header) :
+      Operation(context, header) { }
+
+    /// Constructor for constructing object from client request.
+    /// Initializes base class constructor, decodes request from
+    /// <code>event</code> payload, and then calls initialize_dependencies().
+    /// @param context %Master context
+    /// @param event %Event received from AsyncComm from client request
     OperationCreateTable(ContextPtr &context, EventPtr &event);
+
+    /// Destructor.
     virtual ~OperationCreateTable() { }
 
     virtual void execute();
+
+    /// Returns name of operation
+    /// Returns name of operation (<code>OperationCreateTable</code>)
+    /// @return Name of operation
     virtual const String name();
+
+    /// Returns label for operation
+    /// Returns string "CreateTable <tablename>" 
+    /// Label for operation
     virtual const String label();
+
+    
     virtual void display_state(std::ostream &os);
     virtual uint16_t encoding_version() const;
     virtual size_t encoded_state_length() const;
@@ -48,12 +95,23 @@ namespace Hypertable {
 
     void requires_indices(bool &needs_index, bool &needs_qualifier_index);
 
+    /// Pathtname of table to create
     String m_name;
+
+    /// %Schema for the table
     String m_schema;
+
+    /// %Table identifier
     TableIdentifierManaged m_table;
+
+    /// %Proxy name of server to hold initial range
     String m_location;
-    String m_range_name;
+
+    /// Which parts of table to create
+    TableParts m_parts {TableParts::ALL};
   };
+
+  /// @}
 
 } // namespace Hypertable
 

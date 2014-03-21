@@ -41,17 +41,20 @@ TableSchemaCache::TableSchemaCache(Hyperspace::SessionPtr &hyperspace,
     std::vector<Hyperspace::DirEntryAttr> listing;
     hyperspace->readdir_attr(toplevel_dir + "/tables", "schema", true, listing);
     map_table_schemas("", listing);
+    listing.clear();
+    hyperspace->readdir_attr(toplevel_dir + "/tables", "maintenance_disabled", true, listing);
+    map_maintenance_disabled("", listing);
   }
   catch (Exception &e) {
     HT_FATAL_OUT << "Problem loading table schemas " << e << HT_END;
   }  
 }
 
-bool TableSchemaCache::get(const String &table_id, SchemaPtr &schema) {
-  TableSchemaMap::iterator iter =  m_map.find(table_id);
+bool TableSchemaCache::get(const String &table_id, Entry &entry) {
+  auto iter =  m_map.find(table_id);
   if (iter == m_map.end())
     return false;
-  schema = iter->second;
+  entry = iter->second;
   return true;
 }
 
@@ -59,13 +62,27 @@ bool TableSchemaCache::get(const String &table_id, SchemaPtr &schema) {
 void TableSchemaCache::map_table_schemas(const String &parent,
                                          const std::vector<Hyperspace::DirEntryAttr> &listing) {
   String prefix = !parent.empty() ? parent + "/" : ""; // avoid leading slash
-  foreach_ht (const Hyperspace::DirEntryAttr& e, listing) {
+  for (auto &e : listing) {
     String name = prefix + e.name;
     if (e.has_attr) {
-      SchemaPtr schema = Schema::new_instance((char*)e.attr.base, e.attr.size);
-      m_map.insert(TableSchemaMap::value_type(name, schema));
+      Entry entry;
+      entry.schema = Schema::new_instance((char*)e.attr.base, e.attr.size);
+      m_map.insert(TableSchemaMap::value_type(name, entry));
     }
     map_table_schemas(name, e.sub_entries);
+  }
+}
+
+void
+TableSchemaCache::map_maintenance_disabled(const String &parent,
+                       const std::vector<Hyperspace::DirEntryAttr> &listing) {
+  String prefix = !parent.empty() ? parent + "/" : ""; // avoid leading slash
+  for (auto &e : listing) {
+    String name = prefix + e.name;
+    auto iter =  m_map.find(name);
+    if (e.has_attr && iter != m_map.end())
+      iter->second.maintenance_disabled = true;
+    map_maintenance_disabled(name, e.sub_entries);
   }
 }
 

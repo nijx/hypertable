@@ -556,6 +556,22 @@ namespace Hypertable {
     void set_state(const CommAddress &addr, std::vector<SystemVariable::Spec> &specs,
                    uint64_t generation, DispatchHandler *handler, Timer &timer);
 
+    /// Issues an asynchronous <i>table_maintenance_enable</i> request with timer.
+    /// @param addr Address of RangeServer
+    /// @param table %Table identifier
+    /// @param handler Dispatch handler for asynchronous callback
+    void table_maintenance_enable(const CommAddress &addr,
+                                  const TableIdentifier &table,
+                                  DispatchHandler *handler);
+
+    /// Issues an asynchronous <i>table_maintenance_disable</i> request with timer.
+    /// @param addr Address of RangeServer
+    /// @param table %Table identifier
+    /// @param handler Dispatch handler for asynchronous callback
+    void table_maintenance_disable(const CommAddress &addr,
+                                   const TableIdentifier &table,
+                                   DispatchHandler *handler);
+
   private:
     void do_load_range(const CommAddress &addr, const TableIdentifier &table,
                        const RangeSpec &range, const RangeState &range_state,

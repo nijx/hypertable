@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -22,16 +22,18 @@
 #ifndef HYPERTABLE_MEMORYTRACKER_H
 #define HYPERTABLE_MEMORYTRACKER_H
 
+#include <Hypertable/RangeServer/FileBlockCache.h>
+#include <Hypertable/RangeServer/QueryCache.h>
+
 #include <boost/thread/mutex.hpp>
 
-#include "FileBlockCache.h"
-#include "QueryCache.h"
+#include <memory>
 
 namespace Hypertable {
 
   class MemoryTracker {
   public:
-    MemoryTracker(FileBlockCache *block_cache, QueryCache *query_cache) 
+    MemoryTracker(FileBlockCache *block_cache, QueryCachePtr query_cache) 
       : m_memory_used(0), m_block_cache(block_cache), m_query_cache(query_cache) { }
 
     void add(int64_t amount) {
@@ -54,7 +56,7 @@ namespace Hypertable {
     Mutex m_mutex;
     int64_t m_memory_used;
     FileBlockCache *m_block_cache;
-    QueryCache *m_query_cache;
+    QueryCachePtr m_query_cache;
   };
 
 }

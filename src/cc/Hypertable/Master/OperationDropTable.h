@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,26 +19,26 @@
  * 02110-1301, USA.
  */
 
-/** @file
- * Declarations for OperationDropTable.
- * This file contains declarations for OperationDropTable, an Operation class
- * for dropping (removing) a table from the system.
- */
+/// @file
+/// Declarations for OperationDropTable.
+/// This file contains declarations for OperationDropTable, an Operation class
+/// for dropping (removing) a table from the system.
 
 #ifndef HYPERTABLE_OPERATIONDROPTABLE_H
 #define HYPERTABLE_OPERATIONDROPTABLE_H
 
-#include "Common/StringExt.h"
+#include <Hypertable/Master/Operation.h>
 
-#include "Operation.h"
+#include <Hypertable/Lib/TableParts.h>
+
+#include <Common/StringExt.h>
 
 namespace Hypertable {
 
-  /** @addtogroup Master
-   *  @{
-   */
+  /// @addtogroup Master
+  /// @{
 
-  /** Carries out a drop table operation. */
+  /// Carries out a drop table operation.
   class OperationDropTable : public Operation {
   public:
 
@@ -51,8 +51,10 @@ namespace Hypertable {
      * @param name Pathname of table to drop
      * @param if_exists Flag indicating if operation should succeed if table
      * does not exist
+     * @param parts Which parts of the table to drop
      */
-    OperationDropTable(ContextPtr &context, const String &name, bool if_exists);
+    OperationDropTable(ContextPtr &context, const String &name, bool if_exists,
+                       TableParts parts);
 
     /** Constructor for constructing object from %MetaLog entry.
      * @param context %Master context
@@ -236,9 +238,6 @@ namespace Hypertable {
     /// Pathtname of table to drop
     String m_name;
 
-    /// If table being dropped does not exist, succeed without generating error
-    bool m_if_exists;
-
     /// %Table ID string
     String m_id;
 
@@ -247,9 +246,16 @@ namespace Hypertable {
 
     /// %Range servers for which drop table operation has completed successfuly
     StringSet m_completed;
+
+    /// If table being dropped does not exist, succeed without generating error
+    bool m_if_exists {};
+
+    /// Which parts of table to drop
+    TableParts m_parts {TableParts::ALL};
+
   };
 
-  /**  @} */
+  /// @}
 
 } // namespace Hypertable
 

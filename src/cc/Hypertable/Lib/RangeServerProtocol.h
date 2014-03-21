@@ -81,7 +81,9 @@ namespace Hypertable {
     static const uint64_t COMMAND_PHANTOM_COMMIT_RANGES    = 29;
     static const uint64_t COMMAND_DUMP_PSEUDO_TABLE        = 30;
     static const uint64_t COMMAND_SET_STATE                = 31;
-    static const uint64_t COMMAND_MAX                      = 32;
+    static const uint64_t COMMAND_TABLE_MAINTENANCE_ENABLE = 32;
+    static const uint64_t COMMAND_TABLE_MAINTENANCE_DISABLE = 33;
+    static const uint64_t COMMAND_MAX                      = 34;
 
     static const char *m_command_strings[];
 
@@ -363,6 +365,18 @@ namespace Hypertable {
     static CommBuf *create_request_phantom_commit_ranges(int64_t op_id,
         const String &location, int plan_generation,
         const std::vector<QualifiedRangeSpec> &ranges);
+
+    /// Creates an <i>table_maintenance_enable</i> request message.
+    /// @param table %Table identifier 
+    /// @return protocol message
+    static CommBuf *
+      create_request_table_maintenance_enable(const TableIdentifier &table);
+
+    /// Creates a <i>table_maintenance_disable</i> request message.
+    /// @param table %Table identifier 
+    /// @return protocol message
+    static CommBuf *
+      create_request_table_maintenance_disable(const TableIdentifier &table);
 
     virtual const char *command_text(uint64_t command);
 

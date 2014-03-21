@@ -28,13 +28,14 @@
 #ifndef HYPERSPACE_TIMERHANDLER_H
 #define HYPERSPACE_TIMERHANDLER_H
 
+#include <AsyncComm/ApplicationQueue.h>
+#include <AsyncComm/DispatchHandler.h>
+
+#include <Common/Mutex.h>
+#include <Common/Time.h>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/condition.hpp>
-
-#include "Common/Mutex.h"
-#include "Common/Time.h"
-
-#include "AsyncComm/DispatchHandler.h"
 
 namespace Hypertable {
 

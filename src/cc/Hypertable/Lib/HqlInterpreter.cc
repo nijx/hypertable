@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/* -*- c++ -*-
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -920,6 +920,51 @@ cmd_set(Client *client, ParserState &state, HqlInterpreter::Callback &cb) {
   cb.on_finish();
 }
 
+void
+cmd_rebuild_indexes(Client *client, NamespacePtr &ns, ParserState &state,
+                    HqlInterpreter::Callback &cb) {
+  if (!ns)
+    HT_THROW(Error::BAD_NAMESPACE, "Null namespace");
+
+  if (state.table_name.empty())
+    HT_THROW(Error::HQL_PARSE_ERROR, "Empty table name");
+
+  NamespacePtr working_ns = ns;
+  string table_basename = state.table_name;
+  size_t lastslash = state.table_name.find_last_of('/');
+  if (lastslash != string::npos) {
+    table_basename = state.table_name.substr(lastslash+1);
+    if (state.table_name[0] == '/') {
+      if (lastslash == 0)
+        working_ns = client->open_namespace("/");
+      else
+        working_ns =
+          client->open_namespace(state.table_name.substr(0, lastslash));
+    }
+    else
+      working_ns = client->open_namespace(state.table_name.substr(0, lastslash),
+                                          ns.get());
+  }
+
+  std::string index_type = (state.flags & TableParts::VALUE_INDEX) ? "VALUE" : "";
+  if (state.flags & TableParts::QUALIFIER_INDEX)
+    index_type = "QUALIFIER";
+
+  std::cout << "REBUILD " << index_type << " INDICES " << working_ns->get_name()
+            << " " << table_basename << ";" << std::endl;
+
+  // working_ns->drop_indexes(table_basename);
+
+#if 0
+  TableDumperPtr dumper = new TableDumper(ns, state.table_name, state.scan.builder.get());
+  Cell cell;
+  HT_ASSERT(!dumper->next(cell));
+#endif
+
+  cb.on_finish((TableMutator*)0);
+}
+
+
 void cmd_shutdown_master(Client *client, HqlInterpreter::Callback &cb) {
   client->shutdown();
   cb.on_finish();
@@ -1011,6 +1056,8 @@ void HqlInterpreter::execute(const String &line, Callback &cb) {
       cmd_stop(m_client, state, cb);                               break;
     case COMMAND_SET:
       cmd_set(m_client, state, cb);                                break;
+    case COMMAND_REBUILD_INDICES:
+      cmd_rebuild_indexes(m_client, m_namespace, state, cb);       break;
 
     default:
       HT_THROW(Error::HQL_PARSE_ERROR, String("unsupported command: ") + stripped_line);

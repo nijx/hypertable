@@ -22,23 +22,23 @@
 #ifndef HYPERTABLE_LOCATIONINITIALIZER_H
 #define HYPERTABLE_LOCATIONINITIALIZER_H
 
-#include "Common/String.h"
-#include "Common/Mutex.h"
+#include <Hypertable/RangeServer/Context.h>
 
-#include "Hypertable/Lib/RangeServerProtocol.h"
+#include <Hypertable/Lib/RangeServerProtocol.h>
 
-#include "AsyncComm/ConnectionInitializer.h"
-#include "Hyperspace/Session.h"
-#include <boost/thread/condition.hpp>
+#include <Hyperspace/Session.h>
 
-#include "ServerState.h"
+#include <AsyncComm/ConnectionInitializer.h>
+
+#include <Common/String.h>
+#include <Common/Mutex.h>
 
 namespace Hypertable {
 
   class LocationInitializer : public ConnectionInitializer {
 
   public:
-    LocationInitializer(PropertiesPtr &props, ServerStatePtr server_state);
+    LocationInitializer(std::shared_ptr<Context> &context);
     virtual bool is_removed(const String &path, Hyperspace::SessionPtr &hyperspace);
     virtual CommBuf *create_initialization_request();
     virtual bool process_initialization_response(Event *event);
@@ -48,15 +48,14 @@ namespace Hypertable {
     void set_lock_held() { m_lock_held=true; }
 
   private:
+    std::shared_ptr<Context> m_context;
     Mutex m_mutex;
     boost::condition m_cond;
-    PropertiesPtr m_props;
-    ServerStatePtr m_server_state;
     String m_location;
     String m_location_file;
-    bool m_location_persisted;
-    bool m_handshake_complete;
-    bool m_lock_held;
+    bool m_location_persisted {};
+    bool m_handshake_complete {};
+    bool m_lock_held {};
   };
   typedef boost::intrusive_ptr<LocationInitializer> LocationInitializerPtr;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -238,6 +238,8 @@ namespace Hypertable {
      * @return Location of root METADATA range.
      */
     extern String root_range_location(ContextPtr &context);
+
+    extern void canonicalize_pathname(std::string &pathname);
 
     /** @} */
 

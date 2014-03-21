@@ -19,19 +19,25 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include "Common/Error.h"
-#include "Common/FailureInducer.h"
-#include "Common/ScopeGuard.h"
-#include "Common/Serialization.h"
+/// @file
+/// Definitions for OperationCreateTable.
+/// This file contains definitions for OperationCreateTable, an Operation class
+/// for creating a table.
 
-#include "Hyperspace/Session.h"
-
-#include "Hypertable/Lib/Key.h"
-
-#include "BalancePlanAuthority.h"
+#include <Common/Compat.h>
 #include "OperationCreateTable.h"
-#include "Utility.h"
+
+#include <Hypertable/Master/BalancePlanAuthority.h>
+#include <Hypertable/Master/Utility.h>
+
+#include <Hypertable/Lib/Key.h>
+
+#include <Hyperspace/Session.h>
+
+#include <Common/Error.h>
+#include <Common/FailureInducer.h>
+#include <Common/ScopeGuard.h>
+#include <Common/Serialization.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -40,16 +46,11 @@ using namespace Hyperspace;
 
 OperationCreateTable::OperationCreateTable(ContextPtr &context,
                                            const String &name,
-                                           const String &schema)
-  : Operation(context, MetaLog::EntityType::OPERATION_CREATE_TABLE), m_name(name), m_schema(schema) {
+                                           const String &schema,
+                                           TableParts parts)
+  : Operation(context, MetaLog::EntityType::OPERATION_CREATE_TABLE),
+    m_name(name), m_schema(schema), m_parts(parts) {
   initialize_dependencies();
-}
-
-OperationCreateTable::OperationCreateTable(ContextPtr &context,
-                                           const MetaLog::EntityHeader &header_)
-  : Operation(context, header_) {
-  if (m_table.id && *m_table.id != 0)
-    m_range_name = format("%s[..%s]", m_table.id, Key::END_ROW_MARKER);
 }
 
 OperationCreateTable::OperationCreateTable(ContextPtr &context, EventPtr &event)
@@ -88,16 +89,21 @@ void OperationCreateTable::requires_indices(bool &needs_index,
 }
 
 void OperationCreateTable::execute() {
-  bool is_namespace; 
   RangeSpec range, index_range, qualifier_index_range;
+  std::string range_name;
   int32_t state = get_state();
   bool has_index = false;
   bool has_qualifier_index = false;
   bool initialized = false;
+  bool is_namespace; 
 
-  HT_INFOF("Entering CreateTable-%lld(%s, location=%s) state=%s",
+  HT_INFOF("Entering CreateTable-%lld(%s, location=%s, parts=%s) state=%s",
            (Lld)header.id, m_name.c_str(), m_location.c_str(), 
-           OperationState::get_text(state));
+           m_parts.to_string().c_str(), OperationState::get_text(state));
+
+  // If skipping primary table creation, jumpt to create index
+  if (state == OperationState::INITIAL && !m_parts.primary())
+    state = OperationState::CREATE_INDEX;
 
   switch (state) {
 
@@ -133,7 +139,7 @@ void OperationCreateTable::execute() {
     requires_indices(has_index, has_qualifier_index);
     initialized = true;
 
-    if (has_index) {
+    if (has_index && m_parts.value_index()) {
       try {
         String index_name;
         String index_schema;
@@ -142,8 +148,8 @@ void OperationCreateTable::execute() {
         HT_INFOF("  creating index for table %s", m_name.c_str()); 
         Utility::prepare_index(m_context, m_name, m_schema, 
                         false, index_name, index_schema);
-        op = new OperationCreateTable(m_context, 
-                index_name, index_schema);
+        op = new OperationCreateTable(m_context, index_name, index_schema,
+                                      TableParts(TableParts::PRIMARY));
         op->add_obstruction(m_name + "-create-index");
 
         ScopedLock lock(m_mutex);
@@ -172,7 +178,7 @@ void OperationCreateTable::execute() {
     if (!initialized)
       requires_indices(has_index, has_qualifier_index);
 
-    if (has_qualifier_index) {
+    if (has_qualifier_index && m_parts.qualifier_index()) {
       try {
         String index_name;
         String index_schema;
@@ -181,8 +187,8 @@ void OperationCreateTable::execute() {
         HT_INFOF("  creating qualifier index for table %s", m_name.c_str()); 
         Utility::prepare_index(m_context, m_name, m_schema, 
                         true, index_name, index_schema);
-        op = new OperationCreateTable(m_context, 
-                index_name, index_schema);
+        op = new OperationCreateTable(m_context, index_name, index_schema,
+                                      TableParts(TableParts::PRIMARY));
         op->add_obstruction(m_name + "-create-qualifier-index");
 
         ScopedLock lock(m_mutex);
@@ -207,18 +213,22 @@ void OperationCreateTable::execute() {
     // fall through
 
   case OperationState::WRITE_METADATA:
+    // If skipping primary table creation, finish here
+    if (!m_parts.primary()) {
+      complete_ok();
+      break;
+    }
     Utility::create_table_write_metadata(m_context, &m_table);
     HT_MAYBE_FAIL("create-table-WRITE_METADATA-a");
 
-    m_range_name = format("%s[..%s]", 
-            m_table.id, Key::END_ROW_MARKER);
+    range_name = format("%s[..%s]", m_table.id, Key::END_ROW_MARKER);
     {
       ScopedLock lock(m_mutex);
       m_dependencies.clear();
       m_dependencies.insert(Dependency::SERVERS);
       m_dependencies.insert(Dependency::METADATA);
       m_dependencies.insert(Dependency::SYSTEM);
-      m_obstructions.insert(String("OperationMove ") + m_range_name);
+      m_obstructions.insert(String("OperationMove ") + range_name);
       m_state = OperationState::ASSIGN_LOCATION;
     }
     m_context->mml_writer->record_state(this);
@@ -226,6 +236,10 @@ void OperationCreateTable::execute() {
     return;
 
   case OperationState::ASSIGN_LOCATION:
+
+    if (range_name.empty())
+      range_name = format("%s[..%s]", m_table.id, Key::END_ROW_MARKER);
+
     range.start_row = 0;
     range.end_row = Key::END_ROW_MARKER;
     m_context->get_balance_plan_authority()->get_balance_destination(m_table, range, m_location);
@@ -234,7 +248,7 @@ void OperationCreateTable::execute() {
       m_dependencies.clear();
       m_dependencies.insert(Dependency::METADATA);
       m_dependencies.insert(Dependency::SYSTEM);
-      m_obstructions.insert(String("OperationMove ") + m_range_name);
+      m_obstructions.insert(String("OperationMove ") + range_name);
       m_state = OperationState::LOAD_RANGE;
     }
     m_context->mml_writer->record_state(this);
@@ -268,9 +282,11 @@ void OperationCreateTable::execute() {
                                               m_table, range);
     }
     catch (Exception &e) {
+      if (range_name.empty())
+        range_name = format("%s[..%s]", m_table.id, Key::END_ROW_MARKER);
       // Destination might be down - go back to the initial state
       HT_INFOF("Problem acknowledging load range %s: %s - %s (dest %s)",
-               m_range_name.c_str(), Error::get_text(e.code()),
+               range_name.c_str(), Error::get_text(e.code()),
                e.what(), m_location.c_str());
       poll(0, 0, 5000);
       // Fetch new destination, if changed, and then try again
@@ -311,7 +327,7 @@ void OperationCreateTable::display_state(std::ostream &os) {
   os << " location=" << m_location << " ";
 }
 
-#define OPERATION_CREATE_TABLE_VERSION 1
+#define OPERATION_CREATE_TABLE_VERSION 2
 
 uint16_t OperationCreateTable::encoding_version() const {
   return OPERATION_CREATE_TABLE_VERSION;
@@ -321,7 +337,8 @@ size_t OperationCreateTable::encoded_state_length() const {
   return Serialization::encoded_length_vstr(m_name) +
     Serialization::encoded_length_vstr(m_schema) +
     m_table.encoded_length() +
-    Serialization::encoded_length_vstr(m_location);
+    Serialization::encoded_length_vstr(m_location) +
+    m_parts.encoded_length();
 }
 
 void OperationCreateTable::encode_state(uint8_t **bufp) const {
@@ -329,12 +346,15 @@ void OperationCreateTable::encode_state(uint8_t **bufp) const {
   Serialization::encode_vstr(bufp, m_schema);
   m_table.encode(bufp);
   Serialization::encode_vstr(bufp, m_location);
+  m_parts.encode(bufp);
 }
 
 void OperationCreateTable::decode_state(const uint8_t **bufp, size_t *remainp) {
   decode_request(bufp, remainp);
   m_table.decode(bufp, remainp);
   m_location = Serialization::decode_vstr(bufp, remainp);
+  if (m_decode_version >= 2)
+    m_parts.decode(bufp, remainp);
 }
 
 void OperationCreateTable::decode_request(const uint8_t **bufp, size_t *remainp) {

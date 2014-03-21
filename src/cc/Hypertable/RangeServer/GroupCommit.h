@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -68,8 +68,7 @@ namespace Hypertable {
     int           m_counter;
     FlyweightString m_flyweight_strings;
 
-    typedef std::map<ClusterTableIdPair, TableUpdate *, lt_ctip> TableUpdateMap;
-    TableUpdateMap m_table_map;
+    std::map<ClusterTableIdPair, UpdateRecTable *, lt_ctip> m_table_map;
   };
 }
 

@@ -28,10 +28,9 @@
 #ifndef HYPERTABLE_SERVERSTATE_H
 #define HYPERTABLE_SERVERSTATE_H
 
-#include "Common/Mutex.h"
-#include "Common/ReferenceCount.h"
+#include <Hypertable/Lib/SystemVariable.h>
 
-#include "Hypertable/Lib/SystemVariable.h"
+#include <Common/Mutex.h>
 
 namespace Hypertable {
 
@@ -40,7 +39,7 @@ namespace Hypertable {
    */
 
   /** Holds dynamic server state. */
-  class ServerState : public ReferenceCount {
+  class ServerState {
 
   public:
 
@@ -75,9 +74,6 @@ namespace Hypertable {
     /// System state variable specifications
     std::vector<SystemVariable::Spec> m_specs;
   };
-
-  /// Smart pointer to ServerState
-  typedef intrusive_ptr<ServerState> ServerStatePtr;
 
   /** @}*/
 

@@ -184,6 +184,7 @@ void Range::initialize() {
 
 }
 
+
 void Range::deferred_initialization() {
   RangeMaintenanceGuard::Activator activator(m_maintenance_guard);
 
@@ -920,6 +921,9 @@ void Range::relinquish_finalize() {
 
   // Add tasks to work queue
   Global::add_to_work_queue(acknowledge_relinquish_task);
+
+  // Clear to unblock those waiting for maintenance to complete
+  m_metalog_entity->clear_state();
 
   // disables any further maintenance
   m_maintenance_guard.disable();
