@@ -49,7 +49,6 @@ OperationDropTable::OperationDropTable(ContextPtr &context, const String &name,
                                        bool if_exists, TableParts parts)
   : Operation(context, MetaLog::EntityType::OPERATION_DROP_TABLE), m_name(name),
     m_if_exists(if_exists), m_parts(parts) {
-  initialize_dependencies();
 }
 
 OperationDropTable::OperationDropTable(ContextPtr &context,

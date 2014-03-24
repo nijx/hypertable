@@ -47,6 +47,7 @@ OperationMoveRange.cc
 OperationProcessor.cc
 OperationRecover.cc
 OperationRecoverRanges.cc
+OperationRecreateIndexTables.cc
 OperationRegisterServer.cc
 OperationRegisterServerBlocker.cc
 OperationRelinquishAcknowledge.cc

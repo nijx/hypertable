@@ -20,14 +20,18 @@
  */
 
 /// @file
-/// Declarations for OperationSuspendMaintenance.
-/// This file contains declarations for OperationSuspendMaintenance, an
+/// Declarations for OperationRecreateIndexTables.
+/// This file contains declarations for OperationRecreateIndexTables, an
 /// Operation class for temporarily suspending maintenance on a table.
 
-#ifndef Hypertable_Master_OperationSuspendMaintenance_h
-#define Hypertable_Master_OperationSuspendMaintenance_h
+#ifndef Hypertable_Master_OperationRecreateIndexTables_h
+#define Hypertable_Master_OperationRecreateIndexTables_h
 
 #include "Operation.h"
+
+#include <Hypertable/Lib/TableParts.h>
+
+#include <Common/String.h>
 
 namespace Hypertable {
 
@@ -35,25 +39,27 @@ namespace Hypertable {
   /// @{
 
   /// Temporarily suspends maintenance for a table
-  class OperationSuspendMaintenance : public Operation {
+  class OperationRecreateIndexTables : public Operation {
   public:
 
-    /// Constructor.
-    /// @param context %Master context
-    /// @param label Label identifying parent operation
-    /// @param table_name Full table pathname
-    OperationSuspendMaintenance(ContextPtr &context,
-                                const std::string &label,
-                                const std::string &table_name);
+    OperationRecreateIndexTables(ContextPtr &context, std::string table_name);
 
     /// Constructor for constructing object from %MetaLog entry.
     /// @param context %Master context
     /// @param header %MetaLog header
-    OperationSuspendMaintenance(ContextPtr &context,
-                                const MetaLog::EntityHeader &header);
+    OperationRecreateIndexTables(ContextPtr &context,
+                                 const MetaLog::EntityHeader &header);
+
+    /// Constructor for constructing object from client request.
+    /// Initializes base class constructor, decodes request from
+    /// <code>event</code> payload.
+    /// @param context %Master context
+    /// @param event %Event received from AsyncComm from client request
+    OperationRecreateIndexTables(ContextPtr &context, EventPtr &event);
+
     
     /// Destructor. */
-    virtual ~OperationSuspendMaintenance() { }
+    virtual ~OperationRecreateIndexTables() { }
 
     /// Carries out the manual compaction operation.
     /// This method carries out the operation via the following states:
@@ -102,7 +108,7 @@ namespace Hypertable {
 
     virtual void execute();
 
-    /// Returns name of operation ("OperationSuspendMaintenance")
+    /// Returns name of operation ("OperationRecreateIndexTables")
     /// @return %Operation name
 
     virtual const String name();
@@ -123,7 +129,6 @@ namespace Hypertable {
     /// This method returns the length of the serialized representation of the
     /// object state.  See encode() for a description of the serialized format.
     /// @return Serialized length
-
     virtual size_t encoded_state_length() const;
 
     /// Writes serialized encoding of object state.
@@ -172,44 +177,30 @@ namespace Hypertable {
     /// (decremented by call)
     virtual void decode_state(const uint8_t **bufp, size_t *remainp);
 
-    std::string suspend_dependency() {
-      return std::string("SUSPEND MAINTENANCE ") + m_table_name + " " + m_label;
-    }
-
-    std::string critical_section_dependency() {
-      return std::string("CRITICAL SECTION ") + m_table_name + " " + m_label;
-    }
-
-    std::string resume_dependency() {
-      return std::string("RESUME MAINTENANCE ") + m_table_name + " " + m_label;
-    }
+    virtual void decode_request(const uint8_t **bufp, size_t *remainp);
 
   private:
 
-    void prepare_for_metadata_scan(int state);
+    std::string sub_op_dependency_string(Operation *op) {
+      return format("RECREATE INDEX TABLES subop %lld", (Lld)op->hash_code());
+    }
 
-    void populate_servers_for_table();
+    std::string sub_op_dependency_string(OperationPtr &op) {
+      return sub_op_dependency_string(op.get());
+    }
 
-    bool issue_rangeserver_requests(bool enable);
-
-    /// Label identifying parent operation
-    std::string m_label;
+    bool fetch_schema(std::string &schema);
 
     /// Full pathname of table name to compact
     std::string m_table_name;
 
-    /// Full pathname of table ID to compact
-    std::string m_table_id;
+    TableParts m_table_parts {0};
 
-    /// Set of range servers participating in suspend/resume
-    std::set<std::string> m_servers;
-
-    /// Set of range servers that have completed suspend/resume
-    std::set<std::string> m_completed;
+    int64_t m_subop_hash_code {};
   };
 
   /// @}
 
 } // namespace Hypertable
 
-#endif // Hypertable_Master_OperationSuspendMaintenance_h
+#endif // Hypertable_Master_OperationRecreateIndexTables_h

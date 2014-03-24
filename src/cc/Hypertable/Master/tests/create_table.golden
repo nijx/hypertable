@@ -1,41 +1,26 @@
 [create-table-INITIAL:throw:0] RangeServerConnection {rs1}
 [create-table-INITIAL:throw:0] RangeServerConnection {rs2}
 [create-table-INITIAL:throw:0] OperationCreateTable {ASSIGN_ID}
-[create-table-INITIAL:throw:0]   dependency: INIT
-[create-table-INITIAL:throw:0]   dependency: METADATA
-[create-table-INITIAL:throw:0]   dependency: SYSTEM
 [create-table-INITIAL:throw:0]   exclusivity: /tablefoo
 
 [Utility-create-table-in-hyperspace-1:throw:0] RangeServerConnection {rs1}
 [Utility-create-table-in-hyperspace-1:throw:0] RangeServerConnection {rs2}
 [Utility-create-table-in-hyperspace-1:throw:0] OperationCreateTable {ASSIGN_ID}
-[Utility-create-table-in-hyperspace-1:throw:0]   dependency: INIT
-[Utility-create-table-in-hyperspace-1:throw:0]   dependency: METADATA
-[Utility-create-table-in-hyperspace-1:throw:0]   dependency: SYSTEM
 [Utility-create-table-in-hyperspace-1:throw:0]   exclusivity: /tablefoo
 
 [Utility-create-table-in-hyperspace-2:throw:0] RangeServerConnection {rs1}
 [Utility-create-table-in-hyperspace-2:throw:0] RangeServerConnection {rs2}
 [Utility-create-table-in-hyperspace-2:throw:0] OperationCreateTable {ASSIGN_ID}
-[Utility-create-table-in-hyperspace-2:throw:0]   dependency: INIT
-[Utility-create-table-in-hyperspace-2:throw:0]   dependency: METADATA
-[Utility-create-table-in-hyperspace-2:throw:0]   dependency: SYSTEM
 [Utility-create-table-in-hyperspace-2:throw:0]   exclusivity: /tablefoo
 
 [create-table-ASSIGN_ID:throw:0] RangeServerConnection {rs1}
 [create-table-ASSIGN_ID:throw:0] RangeServerConnection {rs2}
 [create-table-ASSIGN_ID:throw:0] OperationCreateTable {ASSIGN_ID}
-[create-table-ASSIGN_ID:throw:0]   dependency: INIT
-[create-table-ASSIGN_ID:throw:0]   dependency: METADATA
-[create-table-ASSIGN_ID:throw:0]   dependency: SYSTEM
 [create-table-ASSIGN_ID:throw:0]   exclusivity: /tablefoo
 
 [create-table-WRITE_METADATA-a:throw:0] RangeServerConnection {rs1}
 [create-table-WRITE_METADATA-a:throw:0] RangeServerConnection {rs2}
 [create-table-WRITE_METADATA-a:throw:0] OperationCreateTable {ASSIGN_ID}
-[create-table-WRITE_METADATA-a:throw:0]   dependency: INIT
-[create-table-WRITE_METADATA-a:throw:0]   dependency: METADATA
-[create-table-WRITE_METADATA-a:throw:0]   dependency: SYSTEM
 [create-table-WRITE_METADATA-a:throw:0]   exclusivity: /tablefoo
 
 [create-table-WRITE_METADATA-b:throw:0] RangeServerConnection {rs1}

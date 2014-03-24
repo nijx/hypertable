@@ -50,7 +50,7 @@ OperationCreateTable::OperationCreateTable(ContextPtr &context,
                                            TableParts parts)
   : Operation(context, MetaLog::EntityType::OPERATION_CREATE_TABLE),
     m_name(name), m_schema(schema), m_parts(parts) {
-  initialize_dependencies();
+  Utility::canonicalize_pathname(m_name);
 }
 
 OperationCreateTable::OperationCreateTable(ContextPtr &context, EventPtr &event)
@@ -62,8 +62,7 @@ OperationCreateTable::OperationCreateTable(ContextPtr &context, EventPtr &event)
 }
 
 void OperationCreateTable::initialize_dependencies() {
-  boost::trim_if(m_name, boost::is_any_of("/ "));
-  m_name = String("/") + m_name;
+  Utility::canonicalize_pathname(m_name);
   m_exclusivities.insert(m_name);
   if (!boost::algorithm::starts_with(m_name, "/sys/"))
     m_dependencies.insert(Dependency::INIT);

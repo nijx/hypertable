@@ -69,11 +69,8 @@
 [initialize-CREATE_RS_METRICS:throw:0]   obstruction: INIT
 [initialize-CREATE_RS_METRICS:throw:0] OperationCreateNamespace {COMPLETE}
 [initialize-CREATE_RS_METRICS:throw:0] OperationCreateTable {INITIAL}
-[initialize-CREATE_RS_METRICS:throw:0]   dependency: METADATA
-[initialize-CREATE_RS_METRICS:throw:0]   dependency: SYSTEM
 [initialize-CREATE_RS_METRICS:throw:0]   obstruction: initialize[2]
 [initialize-CREATE_RS_METRICS:throw:0]   obstruction: initialize[3]
-[initialize-CREATE_RS_METRICS:throw:0]   exclusivity: /sys/RS_METRICS
 [initialize-CREATE_RS_METRICS:throw:0] OperationCreateNamespace {INITIAL}
 [initialize-CREATE_RS_METRICS:throw:0]   dependency: initialize[3]
 [initialize-CREATE_RS_METRICS:throw:0]   exclusivity: /tmp

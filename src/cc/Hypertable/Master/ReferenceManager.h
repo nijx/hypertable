@@ -91,9 +91,14 @@ namespace Hypertable {
     void remove(int64_t hash_code);
 
     /** Remove operation.
-     * @param operation %Operation to remove
+     * @param operation Pointer to operation to remove
      */
     void remove(Operation *operation) { remove(operation->hash_code()); }
+
+    /** Remove operation.
+     * @param operation Smart pointer to operation to remove
+     */
+    void remove(OperationPtr &operation) { remove(operation->hash_code()); }
 
   private:
 

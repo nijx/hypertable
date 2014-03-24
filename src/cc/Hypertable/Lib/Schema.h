@@ -91,6 +91,10 @@ namespace Hypertable {
 
     static Schema *new_instance(const String &buf, int len);
 
+    static Schema *new_instance(const String &buf) {
+      return new_instance(buf, buf.size());
+    }
+
     static void parse_compressor(const String &spec, PropertiesPtr &);
     void validate_compressor(const String &spec);
     static const PropertiesDesc &compressor_spec_desc();

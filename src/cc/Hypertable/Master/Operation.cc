@@ -245,7 +245,7 @@ bool Operation::remove_if_ready() {
   return true;
 }
 
-void Operation::complete_error(int error, const String &msg) {
+void Operation::complete_error(int error, const String &msg, MetaLog::Entity *additional) {
   {
     ScopedLock lock(m_mutex);
     m_state = OperationState::COMPLETE;
@@ -257,18 +257,23 @@ void Operation::complete_error(int error, const String &msg) {
   }
 
   std::stringstream sout;
-
   sout << "Operation failed (" << *this << ") " << Error::get_text(error) << " - " << msg;
   HT_INFOF("%s", sout.str().c_str());
 
-  if (m_ephemeral)
+  if (m_ephemeral) {
+    HT_ASSERT(additional == 0);
     return;
+  }
 
-  m_context->mml_writer->record_state(this);
+  std::vector<MetaLog::Entity *> entities;
+  entities.push_back(this);
+  if (additional)
+    entities.push_back(additional);
+  m_context->mml_writer->record_state(entities);
 }
 
-void Operation::complete_error(Exception &e) {
-  complete_error(e.code(), e.what());
+void Operation::complete_error(Exception &e, MetaLog::Entity *additional) {
+  complete_error(e.code(), e.what(), additional);
 }
 
 void Operation::complete_ok(MetaLog::Entity *additional) {
@@ -378,6 +383,10 @@ namespace {
     { Hypertable::OperationState::COMMIT, "COMMIT" },
     { Hypertable::OperationState::PHANTOM_LOAD, "PHANTOM_LOAD" },
     { Hypertable::OperationState::REPLAY_FRAGMENTS, "REPLAY_FRAGMENTS" },
+    { Hypertable::OperationState::CREATE_INDICES, "CREATE_INDICES" },
+    { Hypertable::OperationState::DROP_INDICES, "DROP_INDICES" },
+    { Hypertable::OperationState::SUSPEND_TABLE_MAINTENANCE, "SUSPEND_TABLE_MAINTENANCE" },
+    { Hypertable::OperationState::RESUME_TABLE_MAINTENANCE, "RESUME_TABLE_MAINTENANCE" },
     { 0, 0 }
   };
 

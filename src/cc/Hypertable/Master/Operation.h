@@ -77,7 +77,11 @@ namespace Hypertable {
       PREPARE = 20,
       COMMIT = 21,
       PHANTOM_LOAD = 22,
-      REPLAY_FRAGMENTS = 23
+      REPLAY_FRAGMENTS = 23,
+      CREATE_INDICES = 24,
+      DROP_INDICES = 25,
+      SUSPEND_TABLE_MAINTENANCE = 26,
+      RESUME_TABLE_MAINTENANCE = 27
     };
     /** Converts operation state constant to human readable string.
      * @param state %Operation state constant
@@ -426,8 +430,8 @@ namespace Hypertable {
      */
     bool remove_if_ready();
 
-    void complete_error(int error, const String &msg);
-    void complete_error(Exception &e);
+    void complete_error(int error, const String &msg, MetaLog::Entity *additional=0);
+    void complete_error(Exception &e, MetaLog::Entity *additional=0);
     void complete_ok(MetaLog::Entity *additional=0);
 
     virtual int64_t hash_code() const { return m_hash_code; }
@@ -459,6 +463,22 @@ namespace Hypertable {
     void set_ephemeral() {
       ScopedLock lock(m_mutex);
       m_ephemeral = true;
+    }
+
+    /// Get error code
+    /// @return Error code
+    int32_t get_error() {
+      ScopedLock lock(m_mutex);
+      HT_ASSERT(m_state == OperationState::COMPLETE);
+      return m_error;
+    }
+
+    /// Get error message
+    /// @return Error message
+    String get_error_msg() {
+      ScopedLock lock(m_mutex);
+      HT_ASSERT(m_state == OperationState::COMPLETE);
+      return m_error_msg;
     }
 
   protected:
