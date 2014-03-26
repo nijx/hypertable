@@ -81,7 +81,9 @@ namespace Hypertable {
       CREATE_INDICES = 24,
       DROP_INDICES = 25,
       SUSPEND_TABLE_MAINTENANCE = 26,
-      RESUME_TABLE_MAINTENANCE = 27
+      RESUME_TABLE_MAINTENANCE = 27,
+      DROP_VALUE_INDEX = 28,
+      DROP_QUALIFIER_INDEX = 29
     };
     /** Converts operation state constant to human readable string.
      * @param state %Operation state constant
@@ -430,8 +432,19 @@ namespace Hypertable {
      */
     bool remove_if_ready();
 
+    void record_state(std::vector<MetaLog::Entity *> &entities);
+
+    void complete_error(int error, const String &msg, std::vector<MetaLog::Entity *> &additional);
     void complete_error(int error, const String &msg, MetaLog::Entity *additional=0);
-    void complete_error(Exception &e, MetaLog::Entity *additional=0);
+
+    void complete_error(Exception &e, std::vector<MetaLog::Entity *> &additional) {
+      complete_error(e.code(), e.what(), additional);
+    }
+    void complete_error(Exception &e, MetaLog::Entity *additional=0) {
+      complete_error(e.code(), e.what(), additional);
+    }
+
+    void complete_ok(std::vector<MetaLog::Entity *> &additional);
     void complete_ok(MetaLog::Entity *additional=0);
 
     virtual int64_t hash_code() const { return m_hash_code; }

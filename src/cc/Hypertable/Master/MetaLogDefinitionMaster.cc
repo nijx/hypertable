@@ -35,6 +35,7 @@
 #include "OperationRecover.h"
 #include "OperationRecoverRanges.h"
 #include "OperationRecoveryBlocker.h"
+#include "OperationRecreateIndexTables.h"
 #include "OperationSetState.h"
 #include "OperationToggleTableMaintenance.h"
 #include "RangeServerConnection.h"
@@ -143,6 +144,8 @@ Entity *DefinitionMaster::create(const EntityHeader &header) {
       operation = new OperationSetState(m_context, header);
     else if (header.type == EntityType::OPERATION_TOGGLE_TABLE_MAINTENANCE)
       operation = new OperationToggleTableMaintenance(m_context, header);
+    else if (header.type == EntityType::OPERATION_RECREATE_INDEX_TABLES)
+      operation = new OperationRecreateIndexTables(m_context, header);
     else if (header.type == EntityType::SYSTEM_STATE)
       return new SystemState(header);
   }

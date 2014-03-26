@@ -9,7 +9,7 @@
 [move-range-INITIAL-b:throw:0]   dependency: ROOT
 [move-range-INITIAL-b:throw:0]   dependency: SERVERS
 [move-range-INITIAL-b:throw:0]   dependency: SYSTEM
-[move-range-INITIAL-b:throw:0]   obstruction: 3/6/3 move range
+[move-range-INITIAL-b:throw:0]   obstruction: <tid> move range
 [move-range-INITIAL-b:throw:0]   obstruction: OperationMove 3/6/3[bar..foo]
 [move-range-INITIAL-b:throw:0]   exclusivity: -4102518627836282433
 

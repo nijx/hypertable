@@ -33,6 +33,8 @@
 
 #include <Common/StringExt.h>
 
+#include <vector>
+
 namespace Hypertable {
 
   /// @addtogroup Master
@@ -235,6 +237,10 @@ namespace Hypertable {
      */
     void initialize_dependencies();
 
+    bool fetch_and_validate_subop(vector<Entity *> &entities);
+
+    void stage_subop(Operation *operation, std::string dependency_string);
+
     /// Pathtname of table to drop
     String m_name;
 
@@ -252,6 +258,8 @@ namespace Hypertable {
 
     /// Which parts of table to drop
     TableParts m_parts {TableParts::ALL};
+
+    int64_t m_subop_hash_code {};
 
   };
 

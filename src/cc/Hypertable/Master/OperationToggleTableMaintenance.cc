@@ -194,7 +194,7 @@ void OperationToggleTableMaintenance::execute() {
 
   HT_INFOF("Leaving ToggleTableMaintenance-%lld (table=%s %s) state=%s",
            (Lld)header.id, m_table_name.c_str(), m_toggle_on ? "ON" : "OFF",
-           OperationState::get_text(state));
+           OperationState::get_text(get_state()));
 }
 
 

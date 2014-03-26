@@ -58,6 +58,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <algorithm>
+#include <cstdlib>
 #include <fstream>
 #include <iterator>
 #include <list>
@@ -250,7 +251,9 @@ namespace {
       else if (rsc)
         out << label << rsc->name() << " {" << rsc->location() << "}\n";
     }
-    out << "\n";
+    out << endl;
+
+    context->reference_manager->clear();
 
     context->mml_writer = new MetaLog::Writer(context->dfs, context->mml_definition,
                                               g_mml_dir, entities);
@@ -292,6 +295,41 @@ namespace {
 
     initialize_test(context, entities);
     poll(0,0,100);
+  }
+
+  bool check_for_diff(const string &basename) {
+    string cmd;
+    int ret;
+
+    // Transform table ID to "<tid>" since they can change depending on the
+    // order in which the tests are run
+
+    cmd = format("mv %s.output %s.tmp", basename.c_str(), basename.c_str());
+    if ((ret = system(cmd.c_str())) != 0) {
+      cout << "Shell command \"" << cmd << "\" returned " << ret << endl;
+      return false;
+    }
+
+    cmd = format("sed 's/[0-9/]* move range/<tid> move range/g' %s.tmp > %s.output",
+                 basename.c_str(), basename.c_str());
+    if ((ret = system(cmd.c_str())) != 0) {
+      cout << "Shell command \"" << cmd << "\" returned " << ret << endl;
+      return false;
+    }
+
+    cmd = format("rm %s.tmp", basename.c_str());
+    if ((ret = system(cmd.c_str())) != 0) {
+      cout << "Shell command \"" << cmd << "\" returned " << ret << endl;
+      return false;
+    }
+
+    cmd = format("diff %s.output %s.golden", basename.c_str(), basename.c_str());
+    if ((ret = system(cmd.c_str())) != 0) {
+      cout << "Shell command \"" << cmd << "\" returned " << ret << endl;
+      return false;
+    }
+
+    return true;
   }
 
 
@@ -423,8 +461,7 @@ void create_namespace_test(ContextPtr &context) {
   context->op->shutdown();
   context->op->join();
 
-  String cmd = "diff create_namespace.output create_namespace.golden";
-  if (system(cmd.c_str()) != 0)
+  if (!check_for_diff("create_namespace"))
     _exit(1);
 
   context = 0;
@@ -452,8 +489,7 @@ void drop_namespace_test(ContextPtr &context) {
 
   out.close();
 
-  String cmd = "diff drop_namespace.output drop_namespace.golden";
-  if (system(cmd.c_str()) != 0)
+  if (!check_for_diff("drop_namespace"))
     _exit(1);
 
   context = 0;
@@ -508,6 +544,7 @@ void create_table_test(ContextPtr &context) {
   run_test2(context, entities, "create-table-LOAD_RANGE-a:throw:0", out);
   run_test2(context, entities, "create-table-LOAD_RANGE-b:throw:0", out);
   run_test2(context, entities, "create-table-ACKNOWLEDGE:throw:0", out);
+  run_test2(context, entities, "", out);
 
   context->rsc_manager->disconnect_server(g_rsc[0]);
   initialize_test(context, entities);
@@ -520,8 +557,8 @@ void create_table_test(ContextPtr &context) {
   context->op->join();
 
   out.close();
-  String cmd = "diff create_table.output create_table.golden";
-  if (system(cmd.c_str()) != 0)
+
+  if (!check_for_diff("create_table"))
     _exit(1);
 
   context = 0;
@@ -530,55 +567,40 @@ void create_table_test(ContextPtr &context) {
 
 
 void drop_table_test(ContextPtr &context) {
-#if 0
   std::vector<MetaLog::EntityPtr> entities;
-  RangeServerConnectionPtr rsc1, rsc2;
 
-  rsc1 = new RangeServerConnection("rs1", "foo.hypertable.com", InetAddr("72.14.204.99", g_rs_port));
-  rsc2 = new RangeServerConnection("rs2", "bar.hypertable.com", InetAddr("69.147.125.65", g_rs_port));
+  initialize_test_with_servers(context, 2, entities);
 
-  context->rsc_manager->connect_server(rsc1, "foo.hypertable.com", InetAddr("72.14.204.99", 33567), InetAddr("72.14.204.99", g_rs_port));
-  context->rsc_manager->connect_server(rsc2, "bar.hypertable.com", InetAddr("69.147.125.65", 30569), InetAddr("69.147.125.65", g_rs_port));
+  string table_id;
+  create_table(context, entities, "drop_table_test", index_schema_str, table_id);
 
-  entities.push_back(rsc1.get());
-  entities.push_back(rsc2.get());
+  ofstream out("drop_table.output", ios::out|ios::trunc);
 
-  context->mml_writer = new MetaLog::Writer(context->dfs, context->mml_definition,
-                                            g_mml_dir, entities);
+  OperationPtr operation = 
+    new OperationDropTable(context, "drop_table_test", true,
+                           TableParts(TableParts::ALL));
+  entities.push_back(operation.get());
 
-  ofstream out("create_table.output", ios::out|ios::trunc);
+  run_test2(context, entities, "drop-table-INITIAL:throw:0", out);
+  run_test2(context, entities, "drop-table-DROP_VALUE_INDEX-1:throw:0", out);
+  run_test2(context, entities, "drop-table-DROP_VALUE_INDEX-2:throw:0", out);
+  run_test2(context, entities, "drop-table-DROP_QUALIFIER_INDEX-1:throw:0", out);
+  run_test2(context, entities, "drop-table-DROP_QUALIFIER_INDEX-2:throw:0", out);
+  run_test2(context, entities, "drop-table-UPDATE_HYPERSPACE:throw:0", out);
+  run_test2(context, entities, "drop-table-SCAN_METADATA:throw:0", out);
+  run_test2(context, entities, "", out);
 
-  entities.push_back( new OperationCreateTable(context, "tablefoo", schema_str, 
-                                               TableParts(TableParts::ALL)) );
-
-  run_test2(context, entities, "create-table-INITIAL:throw:0", out);
-  run_test2(context, entities, "Utility-create-table-in-hyperspace-1:throw:0", out);
-  run_test2(context, entities, "Utility-create-table-in-hyperspace-2:throw:0", out);
-  run_test2(context, entities, "create-table-ASSIGN_ID:throw:0", out);
-  run_test2(context, entities, "create-table-WRITE_METADATA-a:throw:0", out);
-  run_test2(context, entities, "create-table-WRITE_METADATA-b:throw:0", out);
-  run_test2(context, entities, "create-table-ASSIGN_LOCATION:throw:0", out);
-  run_test2(context, entities, "create-table-LOAD_RANGE-a:throw:0", out);
-  run_test2(context, entities, "create-table-LOAD_RANGE-b:throw:0", out);
-  run_test2(context, entities, "create-table-ACKNOWLEDGE:throw:0", out);
-
-  context->rsc_manager->disconnect_server(rsc1);
-  initialize_test(context, entities);
-  poll(0,0,100);
-  context->rsc_manager->connect_server(rsc1, "foo.hypertable.com", InetAddr("localhost", 30267),
-                                       InetAddr("localhost", g_rs_port));
   context->op->wait_for_empty();
 
   context->op->shutdown();
   context->op->join();
 
   out.close();
-  String cmd = "diff create_table.output create_table.golden";
-  if (system(cmd.c_str()) != 0)
+
+  if (!check_for_diff("drop_table"))
     _exit(1);
 
   context = 0;
-#endif
   _exit(0);
 }
 
@@ -598,10 +620,13 @@ void create_table_with_index_test(ContextPtr &context) {
   entities.push_back(op);
 
   run_test2(context, entities, "create-table-INITIAL:throw:0", out);
-  run_test2(context, entities, "create-table-CREATE_INDEX:throw:0", out);
-  run_test2(context, entities, "create-table-CREATE_QUALIFIER_INDEX:throw:0", out);
+  run_test2(context, entities, "create-table-CREATE_INDEX-1:throw:0", out);
+  run_test2(context, entities, "create-table-CREATE_INDEX-2:throw:0", out);
+  run_test2(context, entities, "create-table-CREATE_QUALIFIER_INDEX-1:throw:0", out);
+  run_test2(context, entities, "create-table-CREATE_QUALIFIER_INDEX-2:throw:0", out);
   run_test2(context, entities, "create-table-FINALIZE:throw:0", out);
   run_test2(context, entities, "create-table-FINALIZE:throw:1", out);
+  run_test2(context, entities, "", out);
 
   context->rsc_manager->disconnect_server(g_rsc[0]);
   initialize_test(context, entities);
@@ -614,8 +639,8 @@ void create_table_with_index_test(ContextPtr &context) {
   context->op->join();
 
   out.close();
-  String cmd = "diff create_table_with_index.output create_table_with_index.golden";
-  if (system(cmd.c_str()) != 0)
+
+  if (!check_for_diff("create_table_with_index"))
     _exit(1);
 
   context = 0;
@@ -640,8 +665,8 @@ void rename_table_test(ContextPtr &context) {
   context->op->join();
 
   out.close();
-  String cmd = "diff rename_table.output rename_table.golden";
-  if (system(cmd.c_str()) != 0)
+
+  if (!check_for_diff("rename_table"))
     _exit(1);
 
   context = 0;
@@ -672,8 +697,7 @@ void master_initialize_test(ContextPtr &context) {
 
   out.close();
 
-  String cmd = "diff master_initialize.output master_initialize.golden";
-  if (system(cmd.c_str()) != 0)
+  if (!check_for_diff("master_initialize"))
     _exit(1);
 
   context = 0;
@@ -771,8 +795,8 @@ void move_range_test(ContextPtr &context) {
   context->op->join();
 
   out.close();
-  String cmd = "diff move_range.output move_range.golden";
-  if (system(cmd.c_str()) != 0)
+
+  if (!check_for_diff("move_range"))
     _exit(1);
 
   context = 0;
@@ -951,8 +975,8 @@ void toggle_table_maintenance_test(ContextPtr &context) {
   context->op->join();
 
   out.close();
-  String cmd = "diff toggle_table_maintenance.output toggle_table_maintenance.golden";
-  if (system(cmd.c_str()) != 0)
+
+  if (!check_for_diff("toggle_table_maintenance"))
     _exit(1);
 
   context = 0;
@@ -980,33 +1004,8 @@ void recreate_index_tables_test(ContextPtr &context) {
   run_test2(context, entities, "toggle-table-maintenance-SCAN_METADATA:throw:0", out);
   run_test2(context, entities, "drop-table-INITIAL:throw:0", out);
   run_test2(context, entities, "create-table-ASSIGN_ID:throw:0", out);
-
-  run_test2(context, entities, "", out);
-
-  // Check for "maintenance_disabled" attribute
-  try {
-    String tablefile = context->toplevel_dir + "/tables/" + table_id;
-    DynamicBuffer dbuf;
-    context->hyperspace->attr_get(tablefile, "maintenance_disabled", dbuf);
-  }
-  catch (Exception &e) {
-    HT_FATAL_OUT << e << HT_END;
-  }
-
-  context->mml_writer->record_removal(operation.get());
-
-  entities.clear();
-  entities.push_back(g_rsc[0].get());
-  entities.push_back(g_rsc[1].get());
-
-  operation = new OperationToggleTableMaintenance(context, "toggle", TableMaintenance::ON);
-  entities.push_back(operation.get());
-
-  run_test2(context, entities, "toggle-table-maintenance-INITIAL:throw:0", out);
-  run_test2(context, entities, "toggle-table-maintenance-UPDATE_HYPERSPACE-1:throw:0", out);
-  run_test2(context, entities, "toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0", out);
-  run_test2(context, entities, "toggle-table-maintenance-SCAN_METADATA:throw:0", out);
-  run_test2(context, entities, "toggle-table-maintenance-ISSUE_REQUESTS:throw:0", out);
+  run_test2(context, entities, "recreate-index-tables-RESUME_TABLE_MAINTENANCE-a:throw:0", out);
+  run_test2(context, entities, "recreate-index-tables-RESUME_TABLE_MAINTENANCE-b:throw:0", out);
   run_test2(context, entities, "", out);
 
   // Check for absence of "maintenance_disabled" attribute
@@ -1025,8 +1024,8 @@ void recreate_index_tables_test(ContextPtr &context) {
   context->op->join();
 
   out.close();
-  String cmd = "diff recreate_index_tables.output recreate_index_tables.golden";
-  if (system(cmd.c_str()) != 0)
+
+  if (!check_for_diff("recreate_index_tables"))
     _exit(1);
 
   context = 0;

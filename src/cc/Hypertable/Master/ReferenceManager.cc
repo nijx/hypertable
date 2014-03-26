@@ -59,3 +59,9 @@ void ReferenceManager::remove(int64_t hash_code) {
     m_map.erase(iter);
 }
 
+
+void ReferenceManager::clear() {
+  ScopedLock lock(m_mutex);
+  m_map.clear();
+}
+

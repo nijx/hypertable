@@ -28,6 +28,7 @@
 #include "OperationCreateTable.h"
 
 #include <Hypertable/Master/BalancePlanAuthority.h>
+#include <Hypertable/Master/ReferenceManager.h>
 #include <Hypertable/Master/Utility.h>
 
 #include <Hypertable/Lib/Key.h>
@@ -40,6 +41,8 @@
 #include <Common/Serialization.h>
 
 #include <boost/algorithm/string.hpp>
+
+#include <vector>
 
 using namespace Hypertable;
 using namespace Hyperspace;
@@ -88,6 +91,7 @@ void OperationCreateTable::requires_indices(bool &needs_index,
 }
 
 void OperationCreateTable::execute() {
+  vector<Entity *> entities;
   RangeSpec range, index_range, qualifier_index_range;
   std::string range_name;
   int32_t state = get_state();
@@ -139,21 +143,18 @@ void OperationCreateTable::execute() {
     initialized = true;
 
     if (has_index && m_parts.value_index()) {
+      Operation *op = 0;
       try {
         String index_name;
         String index_schema;
-        Operation *op = 0;
 
         HT_INFOF("  creating index for table %s", m_name.c_str()); 
         Utility::prepare_index(m_context, m_name, m_schema, 
                         false, index_name, index_schema);
         op = new OperationCreateTable(m_context, index_name, index_schema,
                                       TableParts(TableParts::PRIMARY));
-        op->add_obstruction(m_name + "-create-index");
-
-        ScopedLock lock(m_mutex);
-        add_dependency(m_name + "-create-index");
-        m_sub_ops.push_back(op);
+        stage_subop(op, m_name + "-create-index");
+        entities.push_back(op);
       }
       catch (Exception &e) {
         if (e.code() == Error::INDUCED_FAILURE)
@@ -164,8 +165,11 @@ void OperationCreateTable::execute() {
         return;
       }
 
-      HT_MAYBE_FAIL("create-table-CREATE_INDEX");
+      HT_MAYBE_FAIL("create-table-CREATE_INDEX-1");
       set_state(OperationState::CREATE_QUALIFIER_INDEX);
+      entities.push_back(this);
+      m_context->mml_writer->record_state(entities);
+      HT_MAYBE_FAIL("create-table-CREATE_INDEX-2");
       return;
     }
 
@@ -174,8 +178,14 @@ void OperationCreateTable::execute() {
     // fall through
 
   case OperationState::CREATE_QUALIFIER_INDEX:
+
     if (!initialized)
       requires_indices(has_index, has_qualifier_index);
+
+    entities.clear();
+
+    if (!fetch_and_validate_subop(entities))
+      break;
 
     if (has_qualifier_index && m_parts.qualifier_index()) {
       try {
@@ -188,35 +198,44 @@ void OperationCreateTable::execute() {
                         true, index_name, index_schema);
         op = new OperationCreateTable(m_context, index_name, index_schema,
                                       TableParts(TableParts::PRIMARY));
-        op->add_obstruction(m_name + "-create-qualifier-index");
-
-        ScopedLock lock(m_mutex);
-        add_dependency(m_name + "-create-qualifier-index");
-        m_sub_ops.push_back(op);
+        stage_subop(op, m_name + "-create-qualifier-index");
+        entities.push_back(op);
       }
       catch (Exception &e) {
         if (e.code() == Error::INDUCED_FAILURE)
           throw;
         if (e.code() != Error::NAMESPACE_DOES_NOT_EXIST)
           HT_ERROR_OUT << e << HT_END;
-        complete_error(e);
-        return;
+        complete_error(e, entities);
+        break;
       }
 
-      HT_MAYBE_FAIL("create-table-CREATE_QUALIFIER_INDEX");
+      HT_MAYBE_FAIL("create-table-CREATE_QUALIFIER_INDEX-1");
       set_state(OperationState::WRITE_METADATA);
-      return;
+      entities.push_back(this);
+      record_state(entities);
+      HT_MAYBE_FAIL("create-table-CREATE_QUALIFIER_INDEX-2");
+      break;
     }
     set_state(OperationState::WRITE_METADATA);
+    entities.push_back(this);
+    record_state(entities);
     
     // fall through
 
   case OperationState::WRITE_METADATA:
+
+    entities.clear();
+
+    if (!fetch_and_validate_subop(entities))
+      break;
+
     // If skipping primary table creation, finish here
     if (!m_parts.primary()) {
-      complete_ok();
+      complete_ok(entities);
       break;
     }
+
     Utility::create_table_write_metadata(m_context, &m_table);
     HT_MAYBE_FAIL("create-table-WRITE_METADATA-a");
 
@@ -230,7 +249,8 @@ void OperationCreateTable::execute() {
       m_obstructions.insert(String("OperationMove ") + range_name);
       m_state = OperationState::ASSIGN_LOCATION;
     }
-    m_context->mml_writer->record_state(this);
+    entities.push_back(this);
+    record_state(entities);
     HT_MAYBE_FAIL("create-table-WRITE_METADATA-b");
     return;
 
@@ -313,9 +333,11 @@ void OperationCreateTable::execute() {
     HT_FATALF("Unrecognized state %d", state);
   }
 
-  HT_INFOF("Leaving CreateTable-%lld(%s, id=%s, generation=%u)",
-           (Lld)header.id, m_name.c_str(), 
-           m_table.id, (unsigned)m_table.generation);
+  HT_INFOF("Leaving CreateTable-%lld(%s, id=%s, generation=%u) state=%s",
+           (Lld)header.id, m_name.c_str(), m_table.id ? m_table.id : "",
+           (unsigned)m_table.generation,
+           OperationState::get_text(get_state()));
+
 }
 
 
@@ -337,7 +359,7 @@ size_t OperationCreateTable::encoded_state_length() const {
     Serialization::encoded_length_vstr(m_schema) +
     m_table.encoded_length() +
     Serialization::encoded_length_vstr(m_location) +
-    m_parts.encoded_length();
+    m_parts.encoded_length() + 8;
 }
 
 void OperationCreateTable::encode_state(uint8_t **bufp) const {
@@ -346,14 +368,17 @@ void OperationCreateTable::encode_state(uint8_t **bufp) const {
   m_table.encode(bufp);
   Serialization::encode_vstr(bufp, m_location);
   m_parts.encode(bufp);
+  Serialization::encode_i64(bufp, m_subop_hash_code);
 }
 
 void OperationCreateTable::decode_state(const uint8_t **bufp, size_t *remainp) {
   decode_request(bufp, remainp);
   m_table.decode(bufp, remainp);
   m_location = Serialization::decode_vstr(bufp, remainp);
-  if (m_decode_version >= 2)
+  if (m_decode_version >= 2) {
     m_parts.decode(bufp, remainp);
+    m_subop_hash_code = Serialization::decode_i64(bufp, remainp);
+  }
 }
 
 void OperationCreateTable::decode_request(const uint8_t **bufp, size_t *remainp) {
@@ -369,3 +394,31 @@ const String OperationCreateTable::label() {
   return String("CreateTable ") + m_name;
 }
 
+bool OperationCreateTable::fetch_and_validate_subop(vector<Entity *> &entities) {
+  if (m_subop_hash_code) {
+    OperationPtr op = m_context->reference_manager->get(m_subop_hash_code);
+    op->remove_approval_add(0x01);
+    op->mark_for_removal();
+    m_subop_hash_code = 0;
+    if (op->get_error()) {
+      complete_error(op->get_error(), op->get_error_msg(), op.get());
+      m_context->reference_manager->remove(op);
+      return false;
+    }
+    entities.push_back(op.get());
+  }
+  return true;
+}
+
+void OperationCreateTable::stage_subop(Operation *operation,
+                                       const std::string dependency_string) {
+  operation->add_obstruction(dependency_string);
+  operation->set_remove_approval_mask(0x01);
+  m_context->reference_manager->add(operation);
+  {
+    ScopedLock lock(m_mutex);
+    add_dependency(dependency_string);
+    m_sub_ops.push_back(operation);
+    m_subop_hash_code = operation->hash_code();
+  }
+}

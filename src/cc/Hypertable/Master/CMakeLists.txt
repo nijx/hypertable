@@ -133,6 +133,10 @@ configure_file(${SRC_DIR}/create_table_with_index.golden
 add_test(MasterOperation-CreateTableWithIndex op_test_driver
          create_table_with_index)
 
+configure_file(${SRC_DIR}/drop_table.golden
+               ${DST_DIR}/drop_table.golden COPYONLY)
+add_test(MasterOperation-DropTable op_test_driver drop_table)
+
 configure_file(${SRC_DIR}/rename_table.golden
                ${DST_DIR}/rename_table.golden COPYONLY)
 add_test(MasterOperation-RenameTable op_test_driver rename_table)
@@ -146,6 +150,10 @@ add_test(MasterOperation-BalancePlanAuthority op_test_driver balance_plan_author
 configure_file(${SRC_DIR}/toggle_table_maintenance.golden
                ${DST_DIR}/toggle_table_maintenance.golden COPYONLY)
 add_test(MasterOperation-ToggleTableMaintenance op_test_driver toggle_table_maintenance)
+
+configure_file(${SRC_DIR}/recreate_index_tables.golden
+               ${DST_DIR}/recreate_index_tables.golden COPYONLY)
+add_test(MasterOperation-RecreateIndexTables op_test_driver recreate_index_tables)
 
 add_test(SystemState system_state_test)
 

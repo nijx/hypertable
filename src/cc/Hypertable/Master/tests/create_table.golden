@@ -20,7 +20,7 @@
 
 [create-table-WRITE_METADATA-a:throw:0] RangeServerConnection {rs1}
 [create-table-WRITE_METADATA-a:throw:0] RangeServerConnection {rs2}
-[create-table-WRITE_METADATA-a:throw:0] OperationCreateTable {ASSIGN_ID}
+[create-table-WRITE_METADATA-a:throw:0] OperationCreateTable {WRITE_METADATA}
 [create-table-WRITE_METADATA-a:throw:0]   exclusivity: /tablefoo
 
 [create-table-WRITE_METADATA-b:throw:0] RangeServerConnection {rs1}
@@ -63,4 +63,8 @@
 [create-table-ACKNOWLEDGE:throw:0]   dependency: SYSTEM
 [create-table-ACKNOWLEDGE:throw:0]   obstruction: OperationMove 3[..ÿÿ]
 [create-table-ACKNOWLEDGE:throw:0]   exclusivity: /tablefoo
+
+[] RangeServerConnection {rs1}
+[] RangeServerConnection {rs2}
+[] OperationCreateTable {COMPLETE}
 

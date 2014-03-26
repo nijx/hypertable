@@ -59,6 +59,11 @@ void get_table_server_set(ContextPtr &context, const String &id,
   Cell cell;
   String location;
 
+  if (context->test_mode) {
+    context->get_available_servers(servers);
+    return;
+  }
+
   if (row.empty()) {
     start_row = format("%s:", id.c_str());
     scan_spec.row_limit = 0;

@@ -11,13 +11,13 @@
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0] RangeServerConnection {rs1}
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0] RangeServerConnection {rs2}
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0] OperationToggleTableMaintenance {SCAN_METADATA}
-[toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0]   dependency: 7 move range
+[toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0]   dependency: <tid> move range
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0]   dependency: METADATA
 
 [toggle-table-maintenance-SCAN_METADATA:throw:0] RangeServerConnection {rs1}
 [toggle-table-maintenance-SCAN_METADATA:throw:0] RangeServerConnection {rs2}
 [toggle-table-maintenance-SCAN_METADATA:throw:0] OperationToggleTableMaintenance {ISSUE_REQUESTS}
-[toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: 7 move range
+[toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: <tid> move range
 [toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: METADATA
 [toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: rs1
 [toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: rs2
@@ -25,7 +25,7 @@
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0] RangeServerConnection {rs1}
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0] RangeServerConnection {rs2}
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0] OperationToggleTableMaintenance {ISSUE_REQUESTS}
-[toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: 7 move range
+[toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: <tid> move range
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: METADATA
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: rs1
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: rs2
@@ -47,13 +47,13 @@
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0] RangeServerConnection {rs1}
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0] RangeServerConnection {rs2}
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0] OperationToggleTableMaintenance {SCAN_METADATA}
-[toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0]   dependency: 7 move range
+[toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0]   dependency: <tid> move range
 [toggle-table-maintenance-UPDATE_HYPERSPACE-2:throw:0]   dependency: METADATA
 
 [toggle-table-maintenance-SCAN_METADATA:throw:0] RangeServerConnection {rs1}
 [toggle-table-maintenance-SCAN_METADATA:throw:0] RangeServerConnection {rs2}
 [toggle-table-maintenance-SCAN_METADATA:throw:0] OperationToggleTableMaintenance {ISSUE_REQUESTS}
-[toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: 7 move range
+[toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: <tid> move range
 [toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: METADATA
 [toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: rs1
 [toggle-table-maintenance-SCAN_METADATA:throw:0]   dependency: rs2
@@ -61,7 +61,7 @@
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0] RangeServerConnection {rs1}
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0] RangeServerConnection {rs2}
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0] OperationToggleTableMaintenance {ISSUE_REQUESTS}
-[toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: 7 move range
+[toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: <tid> move range
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: METADATA
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: rs1
 [toggle-table-maintenance-ISSUE_REQUESTS:throw:0]   dependency: rs2

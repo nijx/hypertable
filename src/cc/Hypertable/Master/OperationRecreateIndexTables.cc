@@ -74,16 +74,12 @@ OperationRecreateIndexTables::OperationRecreateIndexTables(ContextPtr &context, 
 
 void OperationRecreateIndexTables::execute() {
   std::vector<Entity *> entities;
-  OperationPtr sub_op;
   Operation *op;
   int32_t state = get_state();
 
   HT_INFOF("Entering RecreateIndexTables-%lld (table=%s, parts=%s) state=%s",
            (Lld)header.id, m_table_name.c_str(),
            m_table_parts.to_string().c_str(), OperationState::get_text(state));
-
-  if (m_subop_hash_code)
-    sub_op = m_context->reference_manager->get(m_subop_hash_code);
 
   switch (state) {
 
@@ -117,116 +113,67 @@ void OperationRecreateIndexTables::execute() {
     // drop through ...
 
   case OperationState::SUSPEND_TABLE_MAINTENANCE:
+    HT_ASSERT(entities.empty());
     op = new OperationToggleTableMaintenance(m_context, m_table_name,
                                              TableMaintenance::OFF);
-    op->set_remove_approval_mask(0x01);
-    m_context->reference_manager->add(op);
-    {
-      ScopedLock lock(m_mutex);
-      op->add_obstruction(sub_op_dependency_string(op));
-      m_dependencies.insert(sub_op_dependency_string(op));
-      m_subop_hash_code = op->hash_code();
-      m_state = OperationState::DROP_INDICES;
-      m_sub_ops.push_back(op);
-    }
+    stage_subop(op);
+    set_state(OperationState::DROP_INDICES);
     entities.push_back(this);
     entities.push_back(op);
     m_context->mml_writer->record_state(entities);
     break;
 
   case OperationState::DROP_INDICES:
-    sub_op->mark_for_removal();
-    if (sub_op->get_error()) {
-      complete_error(sub_op->get_error(), sub_op->get_error_msg(), sub_op.get());
-      m_context->reference_manager->remove(sub_op);
+    HT_ASSERT(entities.empty());
+    if (!fetch_and_validate_subop(entities))
       break;
-    }
     op = new OperationDropTable(m_context, m_table_name, true, m_table_parts);
-    op->set_remove_approval_mask(0x01);
-    m_context->reference_manager->add(op);
-    {
-      ScopedLock lock(m_mutex);
-      op->add_obstruction(sub_op_dependency_string(op));
-      m_dependencies.insert(sub_op_dependency_string(op));
-      m_dependencies.erase(sub_op_dependency_string(sub_op));
-      m_subop_hash_code = op->hash_code();
-      m_state = OperationState::CREATE_INDICES;
-      m_sub_ops.push_back(op);
-    }
-    entities.push_back(this);
+    stage_subop(op);
     entities.push_back(op);
-    entities.push_back(sub_op.get());
-    m_context->mml_writer->record_state(entities);
-    m_context->reference_manager->remove(sub_op);
+    entities.push_back(this);
+    set_state(OperationState::CREATE_INDICES);
+    record_state(entities);
     break;
 
   case OperationState::CREATE_INDICES:
-    sub_op->mark_for_removal();
-    if (sub_op->get_error()) {
-      complete_error(sub_op->get_error(), sub_op->get_error_msg(), sub_op.get());
-      m_context->reference_manager->remove(sub_op);
+    HT_ASSERT(entities.empty());
+    if (!fetch_and_validate_subop(entities))
       break;
-    }
     {
       string schema;
-      if (!fetch_schema(schema))
+      if (!fetch_schema(schema)) {
+        // ???
         break;
+      }
       op = new OperationCreateTable(m_context, m_table_name, schema, m_table_parts);
     }
-    op->set_remove_approval_mask(0x01);
-    m_context->reference_manager->add(op);
-    {
-      ScopedLock lock(m_mutex);
-      op->add_obstruction(sub_op_dependency_string(op));
-      m_dependencies.insert(sub_op_dependency_string(op));
-      m_dependencies.erase(sub_op_dependency_string(sub_op));
-      m_subop_hash_code = op->hash_code();
-      m_state = OperationState::RESUME_TABLE_MAINTENANCE;
-      m_sub_ops.push_back(op);
-    }
-    entities.push_back(this);
+    stage_subop(op);
     entities.push_back(op);
-    entities.push_back(sub_op.get());
-    m_context->mml_writer->record_state(entities);
-    m_context->reference_manager->remove(sub_op);
+    entities.push_back(this);
+    set_state(OperationState::RESUME_TABLE_MAINTENANCE);
+    record_state(entities);
     break;
 
   case OperationState::RESUME_TABLE_MAINTENANCE:
-    sub_op->mark_for_removal();
-    if (sub_op->get_error()) {
-      complete_error(sub_op->get_error(), sub_op->get_error_msg(), sub_op.get());
-      m_context->reference_manager->remove(sub_op);
+    HT_ASSERT(entities.empty());
+    if (!fetch_and_validate_subop(entities))
       break;
-    }
     op = new OperationToggleTableMaintenance(m_context, m_table_name,
                                              TableMaintenance::ON);
-    op->set_remove_approval_mask(0x01);
-    m_context->reference_manager->add(op);
-    {
-      ScopedLock lock(m_mutex);
-      op->add_obstruction(sub_op_dependency_string(op));
-      m_dependencies.insert(sub_op_dependency_string(op));
-      m_dependencies.erase(sub_op_dependency_string(sub_op));
-      m_subop_hash_code = op->hash_code();
-      m_state = OperationState::FINALIZE;
-      m_sub_ops.push_back(op);
-    }
-    entities.push_back(this);
+    stage_subop(op);
     entities.push_back(op);
-    entities.push_back(sub_op.get());
-    m_context->mml_writer->record_state(entities);
-    m_context->reference_manager->remove(sub_op);
+    entities.push_back(this);
+    set_state(OperationState::FINALIZE);
+    HT_MAYBE_FAIL("recreate-index-tables-RESUME_TABLE_MAINTENANCE-a");
+    record_state(entities);
+    HT_MAYBE_FAIL("recreate-index-tables-RESUME_TABLE_MAINTENANCE-b");
     break;
 
   case OperationState::FINALIZE:
-    sub_op->mark_for_removal();
-    if (sub_op->get_error()) {
-      complete_error(sub_op->get_error(), sub_op->get_error_msg(), sub_op.get());
-      m_context->reference_manager->remove(sub_op);
+    HT_ASSERT(entities.empty());
+    if (!fetch_and_validate_subop(entities))
       break;
-    }
-    complete_ok(sub_op.get());
-    m_context->reference_manager->remove(sub_op);
+    complete_ok(entities);
     break;
 
   default:
@@ -235,7 +182,8 @@ void OperationRecreateIndexTables::execute() {
 
   HT_INFOF("Leaving RecreateIndexTables-%lld (table=%s, parts=%s) state=%s",
            (Lld)header.id, m_table_name.c_str(),
-           m_table_parts.to_string().c_str(), OperationState::get_text(state));
+           m_table_parts.to_string().c_str(),
+           OperationState::get_text(get_state()));
 }
 
 void OperationRecreateIndexTables::display_state(std::ostream &os) {
@@ -299,4 +247,39 @@ bool OperationRecreateIndexTables::fetch_schema(std::string &schema) {
   m_context->hyperspace->attr_get(filename, "schema", value_buf);
   schema = string((char *)value_buf.base, strlen((char *)value_buf.base));
   return true;
+}
+
+
+bool OperationRecreateIndexTables::fetch_and_validate_subop(vector<Entity *> &entities) {
+  if (m_subop_hash_code) {
+    OperationPtr op = m_context->reference_manager->get(m_subop_hash_code);
+    op->remove_approval_add(0x01);
+    op->mark_for_removal();
+    m_subop_hash_code = 0;
+    if (op->get_error()) {
+      complete_error(op->get_error(), op->get_error_msg(), op.get());
+      m_context->reference_manager->remove(op);
+      return false;
+    }
+    entities.push_back(op.get());
+    string dependency_string =
+      format("RECREATE INDEX TABLES subop %lld", (Lld)op->hash_code());
+    ScopedLock lock(m_mutex);
+    m_dependencies.erase(dependency_string);
+  }
+  return true;
+}
+
+void OperationRecreateIndexTables::stage_subop(Operation *operation) {
+  string dependency_string =
+    format("RECREATE INDEX TABLES subop %lld", (Lld)operation->hash_code());
+  operation->add_obstruction(dependency_string);
+  operation->set_remove_approval_mask(0x01);
+  m_context->reference_manager->add(operation);
+  {
+    ScopedLock lock(m_mutex);
+    add_dependency(dependency_string);
+    m_sub_ops.push_back(operation);
+    m_subop_hash_code = operation->hash_code();
+  }
 }

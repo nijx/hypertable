@@ -191,6 +191,10 @@ namespace Hypertable {
 
     bool fetch_schema(std::string &schema);
 
+    bool fetch_and_validate_subop(vector<Entity *> &entities);
+
+    void stage_subop(Operation *operation);
+
     /// Full pathname of table name to compact
     std::string m_table_name;
 

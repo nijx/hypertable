@@ -100,6 +100,8 @@ namespace Hypertable {
      */
     void remove(OperationPtr &operation) { remove(operation->hash_code()); }
 
+    void clear();
+
   private:
 
     /// Reference map type (hash_code-to-operation)

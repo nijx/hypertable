@@ -95,6 +95,10 @@ namespace Hypertable {
 
     void requires_indices(bool &needs_index, bool &needs_qualifier_index);
 
+    bool fetch_and_validate_subop(vector<Entity *> &entities);
+
+    void stage_subop(Operation *operation, const std::string dependency_string);
+
     /// Pathtname of table to create
     String m_name;
 
@@ -109,6 +113,9 @@ namespace Hypertable {
 
     /// Which parts of table to create
     TableParts m_parts {TableParts::ALL};
+
+    int64_t m_subop_hash_code {};
+
   };
 
   /// @}
