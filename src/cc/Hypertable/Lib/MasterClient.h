@@ -45,6 +45,7 @@
 
 #include "BalancePlan.h"
 #include "MasterProtocol.h"
+#include "TableParts.h"
 #include "Types.h"
 
 namespace Hypertable {
@@ -143,6 +144,9 @@ namespace Hypertable {
     void drop_table(const String &table_name, bool if_exists,
                     DispatchHandler *handler, Timer *timer=0);
     void drop_table(const String &table_name, bool if_exists, Timer *timer=0);
+
+    void recreate_index_tables(const std::string &table_name,
+                               TableParts table_parts, Timer *timer=0);
 
     void shutdown(Timer *timer=0);
 

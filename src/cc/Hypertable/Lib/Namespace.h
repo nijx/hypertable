@@ -37,6 +37,7 @@
 #include "NameIdMapper.h"
 #include "TableCache.h"
 #include "Table.h"
+#include "TableParts.h"
 #include "TableScanner.h"
 #include "TableScannerAsync.h"
 #include "TableSplit.h"
@@ -259,6 +260,8 @@ namespace Hypertable {
      * @param if_exists don't throw an exception if table does not exist
      */
     void drop_table(const String &name, bool if_exists);
+
+    void rebuild_indices(const std::string &table_name, TableParts table_parts);
 
     /**
      * Returns a list of existing table names

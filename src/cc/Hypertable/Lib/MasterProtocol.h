@@ -37,6 +37,7 @@
 
 #include "BalancePlan.h"
 #include "SystemVariable.h"
+#include "TableParts.h"
 #include "Types.h"
 
 
@@ -74,7 +75,8 @@ namespace Hypertable {
     static const uint64_t COMMAND_REPLAY_STATUS               = 19;
     static const uint64_t COMMAND_COMPACT                     = 20;
     static const uint64_t COMMAND_SET                         = 21;
-    static const uint64_t COMMAND_MAX                         = 22;
+    static const uint64_t COMMAND_RECREATE_INDEX_TABLES       = 22;
+    static const uint64_t COMMAND_MAX                         = 23;
 
     static const char *m_command_strings[];
 
@@ -139,6 +141,9 @@ namespace Hypertable {
     static CommBuf *create_phantom_commit_complete_request(int64_t op_id,
                                     const String &location, int plan_generation,
                                     int32_t error, const String &message);
+
+    static CommBuf *create_recreate_index_tables_request(const std::string &table_name,
+                                                         TableParts table_parts);
 
     virtual const char *command_text(uint64_t command);
 

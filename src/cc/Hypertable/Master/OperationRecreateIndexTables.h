@@ -42,7 +42,8 @@ namespace Hypertable {
   class OperationRecreateIndexTables : public Operation {
   public:
 
-    OperationRecreateIndexTables(ContextPtr &context, std::string table_name);
+    OperationRecreateIndexTables(ContextPtr &context, std::string table_name,
+                                 TableParts table_parts);
 
     /// Constructor for constructing object from %MetaLog entry.
     /// @param context %Master context
@@ -180,14 +181,6 @@ namespace Hypertable {
     virtual void decode_request(const uint8_t **bufp, size_t *remainp);
 
   private:
-
-    std::string sub_op_dependency_string(Operation *op) {
-      return format("RECREATE INDEX TABLES subop %lld", (Lld)op->hash_code());
-    }
-
-    std::string sub_op_dependency_string(OperationPtr &op) {
-      return sub_op_dependency_string(op.get());
-    }
 
     bool fetch_schema(std::string &schema);
 

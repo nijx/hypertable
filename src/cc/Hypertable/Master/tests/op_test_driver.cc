@@ -43,6 +43,7 @@
 #include <Hypertable/Lib/Config.h>
 #include <Hypertable/Lib/MetaLogReader.h>
 #include <Hypertable/Lib/RangeState.h>
+#include <Hypertable/Lib/TableParts.h>
 #include <Hypertable/Lib/Types.h>
 
 #include <DfsBroker/Lib/Client.h>
@@ -994,7 +995,8 @@ void recreate_index_tables_test(ContextPtr &context) {
 
   ofstream out("recreate_index_tables.output", ios::out|ios::trunc);
 
-  OperationPtr operation = new OperationRecreateIndexTables(context, "recreate_index_tables");
+  OperationPtr operation = new OperationRecreateIndexTables(context, "recreate_index_tables",
+                                                            TableParts(TableParts::ALL));
   entities.push_back(operation.get());
 
   context->add_available_server(g_rsc[0]->location());

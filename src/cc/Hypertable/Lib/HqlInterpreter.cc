@@ -921,7 +921,7 @@ cmd_set(Client *client, ParserState &state, HqlInterpreter::Callback &cb) {
 }
 
 void
-cmd_rebuild_indexes(Client *client, NamespacePtr &ns, ParserState &state,
+cmd_rebuild_indices(Client *client, NamespacePtr &ns, ParserState &state,
                     HqlInterpreter::Callback &cb) {
   if (!ns)
     HT_THROW(Error::BAD_NAMESPACE, "Null namespace");
@@ -946,20 +946,10 @@ cmd_rebuild_indexes(Client *client, NamespacePtr &ns, ParserState &state,
                                           ns.get());
   }
 
-  std::string index_type = (state.flags & TableParts::VALUE_INDEX) ? "VALUE" : "";
-  if (state.flags & TableParts::QUALIFIER_INDEX)
-    index_type = "QUALIFIER";
+  int8_t parts = state.flags ? static_cast<int8_t>(state.flags) : TableParts::ALL;
+  TableParts table_parts(parts);
 
-  std::cout << "REBUILD " << index_type << " INDICES " << working_ns->get_name()
-            << " " << table_basename << ";" << std::endl;
-
-  // working_ns->drop_indexes(table_basename);
-
-#if 0
-  TableDumperPtr dumper = new TableDumper(ns, state.table_name, state.scan.builder.get());
-  Cell cell;
-  HT_ASSERT(!dumper->next(cell));
-#endif
+  working_ns->rebuild_indices(table_basename, table_parts);
 
   cb.on_finish((TableMutator*)0);
 }
@@ -1057,7 +1047,7 @@ void HqlInterpreter::execute(const String &line, Callback &cb) {
     case COMMAND_SET:
       cmd_set(m_client, state, cb);                                break;
     case COMMAND_REBUILD_INDICES:
-      cmd_rebuild_indexes(m_client, m_namespace, state, cb);       break;
+      cmd_rebuild_indices(m_client, m_namespace, state, cb);       break;
 
     default:
       HT_THROW(Error::HQL_PARSE_ERROR, String("unsupported command: ") + stripped_line);

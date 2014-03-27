@@ -51,9 +51,10 @@ using namespace Hyperspace;
 using namespace std;
 
 OperationRecreateIndexTables::OperationRecreateIndexTables(ContextPtr &context,
-                                                       std::string table_name) :
+                                                       std::string table_name,
+                                                       TableParts table_parts) :
   Operation(context, MetaLog::EntityType::OPERATION_RECREATE_INDEX_TABLES),
-  m_table_name(table_name) {
+  m_table_name(table_name), m_table_parts(table_parts) {
   Utility::canonicalize_pathname(m_table_name);
   m_exclusivities.insert(m_table_name);
 }
@@ -69,6 +70,7 @@ OperationRecreateIndexTables::OperationRecreateIndexTables(ContextPtr &context, 
   const uint8_t *ptr = event->payload;
   size_t remaining = event->payload_len;
   decode_request(&ptr, &remaining);
+  Utility::canonicalize_pathname(m_table_name);
   m_exclusivities.insert(m_table_name);
 }
 
@@ -95,9 +97,9 @@ void OperationRecreateIndexTables::execute() {
       }
       uint8_t parts = 0;
       for (auto cf : schema->get_column_families()) {
-        if (cf->has_index)
+        if (m_table_parts.value_index() && cf->has_index)
           parts |= TableParts::VALUE_INDEX;
-        if (cf->has_qualifier_index)
+        if (m_table_parts.qualifier_index() && cf->has_qualifier_index)
           parts |= TableParts::QUALIFIER_INDEX;
       }
       if (parts == 0) {
@@ -139,16 +141,14 @@ void OperationRecreateIndexTables::execute() {
     HT_ASSERT(entities.empty());
     if (!fetch_and_validate_subop(entities))
       break;
-    {
+    if (m_table_parts) {
       string schema;
-      if (!fetch_schema(schema)) {
-        // ???
+      if (!fetch_schema(schema))
         break;
-      }
       op = new OperationCreateTable(m_context, m_table_name, schema, m_table_parts);
+      stage_subop(op);
+      entities.push_back(op);
     }
-    stage_subop(op);
-    entities.push_back(op);
     entities.push_back(this);
     set_state(OperationState::RESUME_TABLE_MAINTENANCE);
     record_state(entities);
@@ -210,14 +210,13 @@ void OperationRecreateIndexTables::encode_state(uint8_t **bufp) const {
 }
 
 void OperationRecreateIndexTables::decode_state(const uint8_t **bufp, size_t *remainp) {
-  m_table_name = Serialization::decode_vstr(bufp, remainp);
-  m_table_parts.decode(bufp, remainp);
+  decode_request(bufp, remainp);
   m_subop_hash_code = Serialization::decode_i64(bufp, remainp);
 }
 
 void OperationRecreateIndexTables::decode_request(const uint8_t **bufp, size_t *remainp) {
   m_table_name = Serialization::decode_vstr(bufp, remainp);
-  Utility::canonicalize_pathname(m_table_name);
+  m_table_parts.decode(bufp, remainp);
 }
 
 const String OperationRecreateIndexTables::name() {

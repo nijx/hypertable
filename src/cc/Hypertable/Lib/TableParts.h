@@ -96,6 +96,8 @@ namespace Hypertable {
     /// @return Human readable string describing table parts.
     const std::string to_string();
 
+    operator bool () const { return m_parts != 0; }
+
   private:
 
     /// Bitmask representing table parts.
