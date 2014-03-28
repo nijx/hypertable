@@ -378,7 +378,16 @@ void Namespace::rebuild_indices(const std::string &table_name,
 
   m_master_client->recreate_index_tables(full_name, table_parts);
 
-  // TODO: Rebuild indices
+  // Rebuild indices
+  {
+    TablePtr table = open_table(table_name);
+    ScanSpec scan_spec;
+    scan_spec.rebuild_indices = true;
+    TableScannerPtr scanner = table->create_scanner(scan_spec);
+    Cell cell;
+    while (scanner->next(cell))
+      HT_ASSERT(!"Rebuild index scan returned a cell");
+  }    
 
   // also remove the index tables from the cache
   String index_name=get_index_table_name(table_name);

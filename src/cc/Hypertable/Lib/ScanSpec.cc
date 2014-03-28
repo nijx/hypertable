@@ -1,5 +1,5 @@
-/* -*- c++ -*-
- * Copyright (C) 2007-2013 Hypertable, Inc.
+/*
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -149,7 +149,7 @@ void ScanSpec::encode(uint8_t **bufp) const {
   encode_bool(bufp, scan_and_filter_rows);
   encode_bool(bufp, do_not_cache);
   encode_bool(bufp, and_column_predicates);
-  encode_bool(bufp, rebuild_indexes);
+  encode_bool(bufp, rebuild_indices);
   encode_vi32(bufp, row_offset);
   encode_vi32(bufp, cell_offset);
 }
@@ -186,7 +186,7 @@ void ScanSpec::decode(const uint8_t **bufp, size_t *remainp) {
     scan_and_filter_rows = decode_bool(bufp, remainp);
     do_not_cache = decode_bool(bufp, remainp);
     and_column_predicates = decode_bool(bufp, remainp);
-    rebuild_indexes = decode_bool(bufp, remainp);
+    rebuild_indices = decode_bool(bufp, remainp);
     row_offset = decode_vi32(bufp, remainp);
     cell_offset = decode_vi32(bufp, remainp));
 }
@@ -252,7 +252,7 @@ ostream &Hypertable::operator<<(ostream &os, const ScanSpec &scan_spec) {
   os <<" scan_and_filter_rows=" << scan_spec.scan_and_filter_rows;
   os <<" do_not_cache=" << scan_spec.do_not_cache;
   os <<" and_column_predicates=" << scan_spec.and_column_predicates;
-  os <<" rebuild_indexes=" << scan_spec.rebuild_indexes;
+  os <<" rebuild_indices=" << scan_spec.rebuild_indices;
   os <<" row_offset=" << scan_spec.row_offset;
   os <<" cell_offset=" << scan_spec.cell_offset;
 
@@ -298,7 +298,7 @@ ScanSpec::ScanSpec(CharArena &arena, const ScanSpec &ss)
     return_deletes(ss.return_deletes), keys_only(ss.keys_only),
     scan_and_filter_rows(ss.scan_and_filter_rows),
     do_not_cache(ss.do_not_cache), and_column_predicates(ss.and_column_predicates),
-    rebuild_indexes(ss.rebuild_indexes) {
+    rebuild_indices(ss.rebuild_indices) {
   columns.reserve(ss.columns.size());
   row_intervals.reserve(ss.row_intervals.size());
   cell_intervals.reserve(ss.cell_intervals.size());

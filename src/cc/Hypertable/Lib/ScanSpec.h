@@ -182,7 +182,7 @@ public:
     scan_and_filter_rows = false;
     do_not_cache = false;
     and_column_predicates = false;
-    rebuild_indexes = false;
+    rebuild_indices = false;
   }
 
   /** 
@@ -213,11 +213,11 @@ public:
     other.do_not_cache = do_not_cache;
     other.column_predicates = column_predicates;
     other.and_column_predicates = and_column_predicates;
-    other.rebuild_indexes = rebuild_indexes;
+    other.rebuild_indices = rebuild_indices;
   }
 
   bool cacheable() {
-    if (do_not_cache || rebuild_indexes)
+    if (do_not_cache || rebuild_indices)
       return false;
     else if (row_intervals.size() == 1) {
       HT_ASSERT(row_intervals[0].start && row_intervals[0].end);
@@ -378,7 +378,7 @@ public:
   bool scan_and_filter_rows {};
   bool do_not_cache {};
   bool and_column_predicates {};
-  bool rebuild_indexes {};
+  bool rebuild_indices {};
 };
 
 /**
@@ -595,8 +595,8 @@ public:
   }
 
   /// Rebuild indexes
-  void set_rebuild_indexes(bool val) {
-    m_scan_spec.rebuild_indexes = val;
+  void set_rebuild_indices(bool val) {
+    m_scan_spec.rebuild_indices = val;
   }
 
   /**
