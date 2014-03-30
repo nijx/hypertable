@@ -490,7 +490,7 @@ void Range::add(const Key &key, const ByteString value) {
 
 
 CellListScanner *Range::create_scanner(ScanContextPtr &scan_ctx) {
-  MergeScanner *mscanner = new MergeScannerRange(scan_ctx);
+  MergeScanner *mscanner = new MergeScannerRange(m_table.id, scan_ctx);
   AccessGroupVector  ag_vector(0);
 
 

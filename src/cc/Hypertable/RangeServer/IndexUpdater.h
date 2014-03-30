@@ -62,6 +62,9 @@ namespace Hypertable {
     // purges a key from the indices
     void purge(const Key &key, const ByteString &value);
 
+    // purges a key from the indices
+    void add(const Key &key, const ByteString &value);
+
   private:
     TableMutatorAsync *m_index_mutator;
     TableMutatorAsync *m_qualifier_index_mutator;

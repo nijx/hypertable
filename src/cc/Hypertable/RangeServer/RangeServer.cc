@@ -1477,16 +1477,18 @@ RangeServer::create_scanner(ResponseCallbackCreateScanner *cb,
                            more ? 0 : mscanner->get_disk_read());
     }
 
+    MergeScannerRange *rscan=dynamic_cast<MergeScannerRange *>(scanner.get());
+    int skipped_rows = rscan ? rscan->get_skipped_rows() : 0;
+    int skipped_cells = rscan ? rscan->get_skipped_cells() : 0;
+
     if (more) {
       scan_ctx->deep_copy_specs();
       id = Global::scanner_map.put(scanner, range, table);
     }
-    else
+    else {
       id = 0;
-
-    MergeScannerRange *rscan=dynamic_cast<MergeScannerRange *>(scanner.get());
-    int skipped_rows = rscan ? rscan->get_skipped_rows() : 0;
-    int skipped_cells = rscan ? rscan->get_skipped_cells() : 0;
+      scanner.reset();
+    }
 
     if (table->is_metadata())
       HT_INFOF("Successfully created scanner (id=%u) on table '%s', returning "
@@ -1596,8 +1598,10 @@ RangeServer::fetch_scanblock(ResponseCallbackFetchScanblock *cb,
                            more ? 0 : mscanner->get_disk_read());
     }
 
-    if (!more)
+    if (!more) {
       Global::scanner_map.remove(scanner_id);
+      scanner.reset();
+    }
 
     /**
      *  Send back data

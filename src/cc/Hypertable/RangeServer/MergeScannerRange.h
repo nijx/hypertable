@@ -22,22 +22,23 @@
 #ifndef HYPERTABLE_MERGESCANNERRANGE_H
 #define HYPERTABLE_MERGESCANNERRANGE_H
 
-#include <queue>
-#include <string>
-#include <vector>
-#include <set>
-
 #include "Common/ByteString.h"
 #include "Common/DynamicBuffer.h"
 
 #include "MergeScanner.h"
+#include "IndexUpdater.h"
+
+#include <queue>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace Hypertable {
 
   class MergeScannerRange : public MergeScanner {
 
   public:
-    MergeScannerRange(ScanContextPtr &scan_ctx);
+    MergeScannerRange(const std::string &table_id, ScanContextPtr &scan_ctx);
 
     int32_t get_skipped_cells() {
       return m_cell_skipped;
@@ -53,6 +54,7 @@ namespace Hypertable {
     virtual void do_forward();
 
   private:
+    IndexUpdaterPtr m_index_updater;
     int32_t       m_cell_offset;
     int32_t       m_cell_skipped;
     int32_t       m_cell_count;

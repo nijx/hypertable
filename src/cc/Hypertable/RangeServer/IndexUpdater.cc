@@ -97,6 +97,25 @@ void IndexUpdater::purge(const Key &key, const ByteString &value)
 }
 
 
+void IndexUpdater::add(const Key &key, const ByteString &value) {
+  const uint8_t *vptr = value.ptr;
+  size_t value_len = Serialization::decode_vi32(&vptr);
+
+  HT_ASSERT(key.column_family_code != 0);
+
+  TableMutatorAsync *value_index_mutator = 0;
+  TableMutatorAsync *qualifier_index_mutator = 0;
+
+  if (m_index_map[key.column_family_code])
+    value_index_mutator = m_index_mutator;
+  if (m_qualifier_index_map[key.column_family_code])
+    qualifier_index_mutator = m_qualifier_index_mutator;
+
+  IndexTables::add(key, FLAG_INSERT, vptr, value_len,
+                   value_index_mutator, qualifier_index_mutator);
+
+}
+
 
 IndexUpdater *IndexUpdaterFactory::create(const String &table_id,
                     SchemaPtr &schema, bool has_index, bool has_qualifier_index)
