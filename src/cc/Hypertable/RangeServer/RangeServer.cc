@@ -30,6 +30,7 @@
 #include <Hypertable/RangeServer/Global.h>
 #include <Hypertable/RangeServer/GroupCommit.h>
 #include <Hypertable/RangeServer/HandlerFactory.h>
+#include <Hypertable/RangeServer/IndexUpdater.h>
 #include <Hypertable/RangeServer/LocationInitializer.h>
 #include <Hypertable/RangeServer/MaintenanceQueue.h>
 #include <Hypertable/RangeServer/MaintenanceScheduler.h>
@@ -2333,6 +2334,9 @@ RangeServer::table_maintenance_disable(ResponseCallback *cb,
   table_info->get_ranges(ranges);
   for (RangeData &rd : ranges.array)
     rd.range->wait_for_steady_state();
+
+  /// Clear any cached index tables
+  IndexUpdaterFactory::clear_cache();
 
   cb->response_ok();
 }

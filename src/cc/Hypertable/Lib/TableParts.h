@@ -62,22 +62,22 @@ namespace Hypertable {
 
     /// Constructor.
     /// @param parts Bitmask describing table parts
-    TableParts(int8_t parts) : m_parts(parts) { }
+    TableParts(int8_t parts=0) : m_parts(parts) { }
 
     /// Test if primary table is included in set.
     /// @return <i>true</i> if primary table is included in set, <i>false</i>
     /// otherwise
-    inline bool primary() { return m_parts & PRIMARY; }
+    inline bool primary() const { return m_parts & PRIMARY; }
 
     /// Test if value index is included in set.
     /// @return <i>true</i> if value index is included in set, <i>false</i>
     /// otherwise
-    inline bool value_index() { return m_parts & VALUE_INDEX; }
+    inline bool value_index() const { return m_parts & VALUE_INDEX; }
 
     /// Test if qualifier index is included in set.
     /// @return <i>true</i> if qualifier index is included in set, <i>false</i>
     /// otherwise
-    inline bool qualifier_index() { return m_parts & QUALIFIER_INDEX; }
+    inline bool qualifier_index() const { return m_parts & QUALIFIER_INDEX; }
 
     /// Returns serialized length
     /// @return Serialized length
@@ -94,14 +94,20 @@ namespace Hypertable {
 
     /// Returns human readable string describing table parts.
     /// @return Human readable string describing table parts.
-    const std::string to_string();
+    const std::string to_string() const;
 
+    /// Checks if any table parts are specified.
+    /// @return <i>true</i> if any table parts are specified, <i>false</i>
+    /// otherwise.
     operator bool () const { return m_parts != 0; }
+
+    /// Clears all parts.
+    void clear() { m_parts = 0; }
 
   private:
 
     /// Bitmask representing table parts.
-    int8_t m_parts;
+    int8_t m_parts {};
   };
 
   /// @}

@@ -186,6 +186,12 @@ void IndexUpdaterFactory::close()
   ms_qualifier_index_cache.clear();
 }
 
+void IndexUpdaterFactory::clear_cache() {
+  ScopedLock lock(ms_mutex);
+  ms_index_cache.clear();
+  ms_qualifier_index_cache.clear();
+}
+
 Table *IndexUpdaterFactory::load_table(const String &table_name)
 {
   return new Table(Config::properties, Global::conn_manager,

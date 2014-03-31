@@ -37,7 +37,7 @@ void TableParts::decode(const uint8_t **bufp, size_t *remainp) {
   m_parts = Serialization::decode_i8(bufp, remainp);
 }
 
-const std::string TableParts::to_string() {
+const std::string TableParts::to_string() const {
   std::string str;
   if (m_parts == TableParts::ALL)
     str = "ALL";

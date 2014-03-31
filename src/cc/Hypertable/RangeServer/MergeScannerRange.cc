@@ -52,12 +52,12 @@ MergeScannerRange::MergeScannerRange(const string &table_id, ScanContextPtr &sca
       for (auto cf : scan_ctx->schema->get_column_families()){
         if (!cf || cf->deleted)
           continue;
-        if (cf->has_index) {
+        if (scan_ctx->spec->rebuild_indices.value_index() && cf->has_index) {
           has_index = true;
           if (has_qualifier_index)
             break;
         }
-        if (cf->has_qualifier_index) {
+        if (scan_ctx->spec->rebuild_indices.qualifier_index() && cf->has_qualifier_index) {
           has_qualifier_index = true;
           if (has_index)
             break;

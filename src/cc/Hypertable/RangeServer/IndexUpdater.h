@@ -87,6 +87,9 @@ namespace Hypertable {
     // cleanup function; called before leaving main()
     static void close();
 
+    /// Clears both value and qualifier caches
+    static void clear_cache();
+
   private:
     // loads a table
     static Table *load_table(const String &table_name);

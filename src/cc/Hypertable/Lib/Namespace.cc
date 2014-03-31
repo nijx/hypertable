@@ -382,7 +382,7 @@ void Namespace::rebuild_indices(const std::string &table_name,
   {
     TablePtr table = open_table(table_name);
     ScanSpec scan_spec;
-    scan_spec.rebuild_indices = true;
+    scan_spec.rebuild_indices = table_parts;
     TableScannerPtr scanner = table->create_scanner(scan_spec);
     Cell cell;
     while (scanner->next(cell))

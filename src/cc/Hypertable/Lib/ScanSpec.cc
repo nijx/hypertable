@@ -117,14 +117,15 @@ size_t ScanSpec::encoded_length() const {
                encoded_length_vstr(row_regexp) +
                encoded_length_vstr(value_regexp) +
                encoded_length_vi32(row_offset) +
-               encoded_length_vi32(cell_offset);
+               encoded_length_vi32(cell_offset) +
+               rebuild_indices.encoded_length();
 
   foreach_ht(const char *c, columns) len += encoded_length_vstr(c);
   foreach_ht(const RowInterval &ri, row_intervals) len += ri.encoded_length();
   foreach_ht(const CellInterval &ci, cell_intervals) len += ci.encoded_length();
   foreach_ht(const ColumnPredicate &cp, column_predicates) len += cp.encoded_length();
 
-  return len + 8 + 8 + 6;
+  return len + 8 + 8 + 5;
 }
 
 void ScanSpec::encode(uint8_t **bufp) const {
@@ -149,7 +150,7 @@ void ScanSpec::encode(uint8_t **bufp) const {
   encode_bool(bufp, scan_and_filter_rows);
   encode_bool(bufp, do_not_cache);
   encode_bool(bufp, and_column_predicates);
-  encode_bool(bufp, rebuild_indices);
+  rebuild_indices.encode(bufp);
   encode_vi32(bufp, row_offset);
   encode_vi32(bufp, cell_offset);
 }
@@ -186,7 +187,7 @@ void ScanSpec::decode(const uint8_t **bufp, size_t *remainp) {
     scan_and_filter_rows = decode_bool(bufp, remainp);
     do_not_cache = decode_bool(bufp, remainp);
     and_column_predicates = decode_bool(bufp, remainp);
-    rebuild_indices = decode_bool(bufp, remainp);
+    rebuild_indices.decode(bufp, remainp);
     row_offset = decode_vi32(bufp, remainp);
     cell_offset = decode_vi32(bufp, remainp));
 }
@@ -252,7 +253,7 @@ ostream &Hypertable::operator<<(ostream &os, const ScanSpec &scan_spec) {
   os <<" scan_and_filter_rows=" << scan_spec.scan_and_filter_rows;
   os <<" do_not_cache=" << scan_spec.do_not_cache;
   os <<" and_column_predicates=" << scan_spec.and_column_predicates;
-  os <<" rebuild_indices=" << scan_spec.rebuild_indices;
+  os <<" rebuild_indices=" << scan_spec.rebuild_indices.to_string();
   os <<" row_offset=" << scan_spec.row_offset;
   os <<" cell_offset=" << scan_spec.cell_offset;
 

@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -22,12 +22,15 @@
 #ifndef HYPERTABLE_SCANSPEC_H
 #define HYPERTABLE_SCANSPEC_H
 
+#include <Hypertable/Lib/KeySpec.h>
+#include <Hypertable/Lib/TableParts.h>
+
+#include <Common/PageArenaAllocator.h>
+
 #include <boost/noncopyable.hpp>
 
 #include <vector>
 
-#include "Common/PageArenaAllocator.h"
-#include "KeySpec.h"
 
 namespace Hypertable {
 
@@ -175,6 +178,7 @@ public:
     column_predicates.clear();
     time_interval.first = TIMESTAMP_MIN;
     time_interval.second = TIMESTAMP_MAX;
+    rebuild_indices.clear();
     keys_only = false;
     return_deletes = false;
     row_regexp = 0;
@@ -182,7 +186,6 @@ public:
     scan_and_filter_rows = false;
     do_not_cache = false;
     and_column_predicates = false;
-    rebuild_indices = false;
   }
 
   /** 
@@ -378,7 +381,7 @@ public:
   bool scan_and_filter_rows {};
   bool do_not_cache {};
   bool and_column_predicates {};
-  bool rebuild_indices {};
+  TableParts rebuild_indices;
 };
 
 /**
@@ -594,9 +597,10 @@ public:
     m_scan_spec.do_not_cache = val;
   }
 
-  /// Rebuild indexes
-  void set_rebuild_indices(bool val) {
-    m_scan_spec.rebuild_indices = val;
+  /// Rebuild indices
+  /// @param parts Describes which indices to rebuild
+  void set_rebuild_indices(TableParts parts) {
+    m_scan_spec.rebuild_indices = parts;
   }
 
   /**

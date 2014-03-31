@@ -261,6 +261,13 @@ namespace Hypertable {
      */
     void drop_table(const String &name, bool if_exists);
 
+    /// Rebuild a table's indices.
+    /// Rebuilds the indices for table <code>table_name</code> by carrying out a
+    /// <i>recreate index tables</i> master operation an then re-populating the
+    /// index tables by scanning the primary table with the
+    /// <i>rebuild_indices</i> member of ScanSpec set.
+    /// @param table_name Name of table for which indices are to be rebuilt
+    /// @param table_parts Controls which indices to rebuild
     void rebuild_indices(const std::string &table_name, TableParts table_parts);
 
     /**
