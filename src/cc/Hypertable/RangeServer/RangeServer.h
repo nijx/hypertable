@@ -173,8 +173,9 @@ namespace Hypertable {
 
     /// Disables maintenance for a table.
     /// This function disables maintenance for the table identified by
-    /// <code>table</code> and waits for any in progress maintenance on any of
-    /// the table's ranges to complete.
+    /// <code>table</code>, waits for any in progress maintenance on any of
+    /// the table's ranges to complete, and then calls
+    /// IndexUpdaterFactory::clear_cache() to drop any cached index tables.
     /// @param cb Response callback
     /// @param table %Table identifier
     void table_maintenance_disable(ResponseCallback *cb,

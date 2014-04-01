@@ -43,9 +43,8 @@
 
 namespace Hypertable {
 
-  /** @addtogroup libHypertable
-   * @{
-   */
+  /// @addtogroup libHypertable
+  /// @{
 
   /** Generates Master protocol request messages.
    */
@@ -142,13 +141,31 @@ namespace Hypertable {
                                     const String &location, int plan_generation,
                                     int32_t error, const String &message);
 
+    /// Creates <i>recreate index tables</i> %Master operation request message.
+    /// Formats a <i>recreate index tables</i> %Master operation request message
+    /// as follows:
+    /// <table>
+    ///   <tr>
+    ///   <th>Encoding</th><th>Description</th>
+    ///   </tr>
+    ///   <tr>
+    ///   <td>vstr</td><td>Name of table for which to recreate index tables</td>
+    ///   </tr>
+    ///   <tr>
+    ///   <td>TableParts</td><td>Serialized object specifying which index tables to recreate
+    ///   </td>
+    ///   </tr>
+    /// </table>
+    /// @param table_name Name of table for which to recreate index tables
+    /// @param table_parts Specifies which index tables to recreate
+    /// @return %Master operation request message
     static CommBuf *create_recreate_index_tables_request(const std::string &table_name,
                                                          TableParts table_parts);
 
     virtual const char *command_text(uint64_t command);
 
   };
-  /** @}*/
+  /// @}
 }
 
 #endif // MASTER_PROTOCOL_H

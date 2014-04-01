@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -22,33 +22,37 @@
 #ifndef HYPERTABLE_NAMESPACE_H
 #define HYPERTABLE_NAMESPACE_H
 
+#include <Hypertable/Lib/ClientObject.h>
+#include <Hypertable/Lib/MasterClient.h>
+#include <Hypertable/Lib/NameIdMapper.h>
+#include <Hypertable/Lib/NamespaceListing.h>
+#include <Hypertable/Lib/Table.h>
+#include <Hypertable/Lib/TableCache.h>
+#include <Hypertable/Lib/TableMutator.h>
+#include <Hypertable/Lib/TableParts.h>
+#include <Hypertable/Lib/TableScanner.h>
+#include <Hypertable/Lib/TableScannerAsync.h>
+#include <Hypertable/Lib/TableSplit.h>
+
+#include <Hyperspace/Session.h>
+
+#include <AsyncComm/ApplicationQueueInterface.h>
+#include <AsyncComm/ConnectionManager.h>
+
+#include <Common/Mutex.h>
+#include <Common/ReferenceCount.h>
+#include <Common/String.h>
+
 #include <boost/tokenizer.hpp>
-
-#include "Common/Mutex.h"
-#include "Common/ReferenceCount.h"
-#include "Common/String.h"
-
-#include "AsyncComm/ApplicationQueueInterface.h"
-#include "AsyncComm/ConnectionManager.h"
-#include "Hyperspace/Session.h"
-
-#include "ClientObject.h"
-#include "MasterClient.h"
-#include "NameIdMapper.h"
-#include "TableCache.h"
-#include "Table.h"
-#include "TableParts.h"
-#include "TableScanner.h"
-#include "TableScannerAsync.h"
-#include "TableSplit.h"
-#include "TableMutator.h"
-#include "NamespaceListing.h"
 
 namespace Hypertable {
 
   class Comm;
   class HqlInterpreter;
   class Client;
+
+  /// @addtogroup libHypertable
+  /// @{
 
   class Namespace : public ClientObject {
   public:
@@ -323,6 +327,8 @@ namespace Hypertable {
   };
 
   typedef intrusive_ptr<Namespace> NamespacePtr;
+
+  /// @}
 
 } // namespace Hypertable
 

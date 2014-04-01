@@ -40,9 +40,8 @@
 
 namespace Hypertable {
 
-  /** @addtogroup libHypertable
-   * @{
-   */
+  /// @addtogroup libHypertable
+  /// @{
 
   /** Generates RangeServer protocol request messages.
    */
@@ -366,13 +365,13 @@ namespace Hypertable {
         const String &location, int plan_generation,
         const std::vector<QualifiedRangeSpec> &ranges);
 
-    /// Creates an <i>table_maintenance_enable</i> request message.
+    /// Creates a RangeServer::table_maintenance_enable() request message.
     /// @param table %Table identifier 
     /// @return protocol message
     static CommBuf *
       create_request_table_maintenance_enable(const TableIdentifier &table);
 
-    /// Creates a <i>table_maintenance_disable</i> request message.
+    /// Creates a RangeServer::table_maintenance_disable() request message.
     /// @param table %Table identifier 
     /// @return protocol message
     static CommBuf *
@@ -386,7 +385,7 @@ namespace Hypertable {
           const vector<QualifiedRangeSpec> &ranges);
   };
 
-  /** @}*/
+  /// @}
 }
 
 #endif // HYPERTABLE_RANGESERVERPROTOCOL_H

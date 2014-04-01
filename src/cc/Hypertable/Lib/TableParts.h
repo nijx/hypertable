@@ -33,7 +33,7 @@
 
 namespace Hypertable {
 
-  /// @addtogroup Master
+  /// @addtogroup libHypertable
   /// @{
 
   /// Represents a set of table parts (sub-tables).
@@ -81,15 +81,26 @@ namespace Hypertable {
 
     /// Returns serialized length
     /// @return Serialized length
+    /// @see encode() for serialization format
     virtual size_t encoded_length() const override { return 1; };
 
     /// Writes serialized representation to a buffer.
+    /// Serialized format is as follows:
+    /// <table>
+    ///   <tr>
+    ///   <th>Encoding</th><th>Description</th>
+    ///   </tr>
+    ///   <tr>
+    ///   <td>1 byte</td><td>Bitmask of part bits</td>
+    ///   </tr>
+    /// </table>
     /// @param bufp Address of destination buffer pointer (advanced by call)
     virtual void encode(uint8_t **bufp) const override;
 
     /// Reads serialized representation from a buffer.
     /// @param bufp Address of destination buffer pointer (advanced by call)
     /// @param remainp Address of integer holding amount of remaining buffer
+    /// @see encode() for serialization format
     virtual void decode(const uint8_t **bufp, size_t *remainp) override;
 
     /// Returns human readable string describing table parts.

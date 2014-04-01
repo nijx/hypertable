@@ -34,6 +34,9 @@
 
 namespace Hypertable {
 
+  /// @addtogroup libHypertable
+  /// @{
+
   enum BloomFilterMode {
     BLOOM_FILTER_DISABLED,
     BLOOM_FILTER_ROWS,
@@ -91,6 +94,9 @@ namespace Hypertable {
 
     static Schema *new_instance(const String &buf, int len);
 
+    /// Creates schema object from XML schema string.
+    /// @param buf Buffer holding XML schema string.
+    /// @return Pointer to newly allocated Schema object.
     static Schema *new_instance(const String &buf) {
       return new_instance(buf, buf.size());
     }
@@ -226,6 +232,8 @@ namespace Hypertable {
   };
 
   typedef intrusive_ptr<Schema> SchemaPtr;
+
+  /// @}
 
 } // namespace Hypertable
 

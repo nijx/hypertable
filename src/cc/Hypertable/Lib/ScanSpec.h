@@ -146,9 +146,7 @@ typedef std::vector<const char *, CstrAlloc> CstrColumns;
 typedef PageArenaAllocator<ColumnPredicate> ColumnPredicateAlloc;
 typedef std::vector<ColumnPredicate, ColumnPredicateAlloc> ColumnPredicates;
 
-/**
- * Represents a scan predicate.
- */
+/// Scan predicate and control specification.
 class ScanSpec {
 public:
   ScanSpec() : time_interval(TIMESTAMP_MIN, TIMESTAMP_MAX) { }
@@ -188,14 +186,10 @@ public:
     and_column_predicates = false;
   }
 
-  /** 
-   * Initialize 'other' ScanSpec with this copy sans the intervals 
-   *
-   * !!
-   * This function performs a "shallow copy" of the column_predicate vector.
-   * If other.column_predicate is destroyed, the pointers of the column
-   * predicates might become invalid.
-   */
+  /// Initialize another ScanSpec object with this copy sans the intervals.
+  /// This function performs a <i>shallow copy</i> of the column_predicate vector.
+  /// If other.column_predicate is destroyed, the pointers of the column
+  /// predicates might become invalid.
   void base_copy(ScanSpec &other) const {
     other.row_limit = row_limit;
     other.cell_limit = cell_limit;
