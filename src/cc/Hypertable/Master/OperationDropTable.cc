@@ -350,11 +350,9 @@ bool OperationDropTable::fetch_and_validate_subop(vector<Entity *> &entities) {
   if (m_subop_hash_code) {
     OperationPtr op = m_context->reference_manager->get(m_subop_hash_code);
     op->remove_approval_add(0x01);
-    op->mark_for_removal();
     m_subop_hash_code = 0;
     if (op->get_error()) {
       complete_error(op->get_error(), op->get_error_msg(), op.get());
-      m_context->reference_manager->remove(op);
       return false;
     }
     entities.push_back(op.get());

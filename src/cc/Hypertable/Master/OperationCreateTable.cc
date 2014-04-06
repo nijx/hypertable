@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -61,10 +61,6 @@ OperationCreateTable::OperationCreateTable(ContextPtr &context, EventPtr &event)
   const uint8_t *ptr = event->payload;
   size_t remaining = event->payload_len;
   decode_request(&ptr, &remaining);
-  initialize_dependencies();
-}
-
-void OperationCreateTable::initialize_dependencies() {
   Utility::canonicalize_pathname(m_name);
   m_exclusivities.insert(m_name);
   if (!boost::algorithm::starts_with(m_name, "/sys/"))
@@ -170,7 +166,7 @@ void OperationCreateTable::execute() {
       entities.push_back(this);
       m_context->mml_writer->record_state(entities);
       HT_MAYBE_FAIL("create-table-CREATE_INDEX-2");
-      return;
+      break;
     }
 
     set_state(OperationState::CREATE_QUALIFIER_INDEX);
@@ -398,11 +394,9 @@ bool OperationCreateTable::fetch_and_validate_subop(vector<Entity *> &entities) 
   if (m_subop_hash_code) {
     OperationPtr op = m_context->reference_manager->get(m_subop_hash_code);
     op->remove_approval_add(0x01);
-    op->mark_for_removal();
     m_subop_hash_code = 0;
     if (op->get_error()) {
       complete_error(op->get_error(), op->get_error_msg(), op.get());
-      m_context->reference_manager->remove(op);
       return false;
     }
     entities.push_back(op.get());

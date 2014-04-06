@@ -248,8 +248,18 @@ bool Operation::remove_if_ready() {
   return true;
 }
 
+bool Operation::removal_approved() {
+  ScopedLock lock(m_mutex);
+  return m_remove_approval_mask && m_remove_approvals == m_remove_approval_mask;
+}
+
 void Operation::record_state(std::vector<MetaLog::Entity *> &entities) {
-  m_context->mml_writer->record_state(entities);  
+  for (auto entity : entities) {
+    Operation *op = dynamic_cast<Operation *>(entity);
+    if (op && op->removal_approved())
+      op->mark_for_removal();
+  }
+  m_context->mml_writer->record_state(entities);
   for (auto entity : entities) {
     Operation *op = dynamic_cast<Operation *>(entity);
     if (op && op->marked_for_removal())
@@ -300,10 +310,6 @@ void Operation::complete_ok(std::vector<MetaLog::Entity *> &additional) {
     m_dependencies.clear();
     m_obstructions.clear();
     m_exclusivities.clear();
-    if (m_remove_approval_mask && m_remove_approvals == m_remove_approval_mask) {
-      m_context->reference_manager->remove(this);
-      mark_for_removal();
-    }
     if (m_ephemeral) {
       HT_ASSERT(additional.empty());
       return;

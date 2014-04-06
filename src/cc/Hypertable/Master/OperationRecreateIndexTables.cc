@@ -21,8 +21,8 @@
 
 /// @file
 /// Definitions for OperationRecreateIndexTables.
-/// This file contains definitions for OperationRecreateIndexTables, an Operation
-/// class for recreating index tables.
+/// This file contains definitions for OperationRecreateIndexTables, an
+/// Operation class for reconstructing a table's index tables.
 
 #include <Common/Compat.h>
 #include "OperationRecreateIndexTables.h"
@@ -54,9 +54,9 @@ OperationRecreateIndexTables::OperationRecreateIndexTables(ContextPtr &context,
                                                        std::string table_name,
                                                        TableParts table_parts) :
   Operation(context, MetaLog::EntityType::OPERATION_RECREATE_INDEX_TABLES),
-  m_table_name(table_name), m_table_parts(table_parts) {
-  Utility::canonicalize_pathname(m_table_name);
-  m_exclusivities.insert(m_table_name);
+  m_name(table_name), m_parts(table_parts) {
+  Utility::canonicalize_pathname(m_name);
+  m_exclusivities.insert(m_name);
 }
 
 
@@ -70,8 +70,8 @@ OperationRecreateIndexTables::OperationRecreateIndexTables(ContextPtr &context, 
   const uint8_t *ptr = event->payload;
   size_t remaining = event->payload_len;
   decode_request(&ptr, &remaining);
-  Utility::canonicalize_pathname(m_table_name);
-  m_exclusivities.insert(m_table_name);
+  Utility::canonicalize_pathname(m_name);
+  m_exclusivities.insert(m_name);
 }
 
 void OperationRecreateIndexTables::execute() {
@@ -80,8 +80,8 @@ void OperationRecreateIndexTables::execute() {
   int32_t state = get_state();
 
   HT_INFOF("Entering RecreateIndexTables-%lld (table=%s, parts=%s) state=%s",
-           (Lld)header.id, m_table_name.c_str(),
-           m_table_parts.to_string().c_str(), OperationState::get_text(state));
+           (Lld)header.id, m_name.c_str(),
+           m_parts.to_string().c_str(), OperationState::get_text(state));
 
   switch (state) {
 
@@ -97,16 +97,16 @@ void OperationRecreateIndexTables::execute() {
       }
       uint8_t parts = 0;
       for (auto cf : schema->get_column_families()) {
-        if (m_table_parts.value_index() && cf->has_index)
+        if (m_parts.value_index() && cf->has_index)
           parts |= TableParts::VALUE_INDEX;
-        if (m_table_parts.qualifier_index() && cf->has_qualifier_index)
+        if (m_parts.qualifier_index() && cf->has_qualifier_index)
           parts |= TableParts::QUALIFIER_INDEX;
       }
       if (parts == 0) {
-        complete_error(Error::TABLE_DOES_NOT_HAVE_INDICES, m_table_name);
+        complete_error(Error::NOTHING_TO_DO, m_name);
         break;
       }
-      m_table_parts = TableParts(parts);
+      m_parts = TableParts(parts);
     }
     set_state(OperationState::SUSPEND_TABLE_MAINTENANCE);
     m_context->mml_writer->record_state(this);
@@ -116,7 +116,7 @@ void OperationRecreateIndexTables::execute() {
 
   case OperationState::SUSPEND_TABLE_MAINTENANCE:
     HT_ASSERT(entities.empty());
-    op = new OperationToggleTableMaintenance(m_context, m_table_name,
+    op = new OperationToggleTableMaintenance(m_context, m_name,
                                              TableMaintenance::OFF);
     stage_subop(op);
     set_state(OperationState::DROP_INDICES);
@@ -129,7 +129,7 @@ void OperationRecreateIndexTables::execute() {
     HT_ASSERT(entities.empty());
     if (!fetch_and_validate_subop(entities))
       break;
-    op = new OperationDropTable(m_context, m_table_name, true, m_table_parts);
+    op = new OperationDropTable(m_context, m_name, true, m_parts);
     stage_subop(op);
     entities.push_back(op);
     entities.push_back(this);
@@ -141,11 +141,11 @@ void OperationRecreateIndexTables::execute() {
     HT_ASSERT(entities.empty());
     if (!fetch_and_validate_subop(entities))
       break;
-    if (m_table_parts) {
+    if (m_parts) {
       string schema;
       if (!fetch_schema(schema))
         break;
-      op = new OperationCreateTable(m_context, m_table_name, schema, m_table_parts);
+      op = new OperationCreateTable(m_context, m_name, schema, m_parts);
       stage_subop(op);
       entities.push_back(op);
     }
@@ -158,7 +158,7 @@ void OperationRecreateIndexTables::execute() {
     HT_ASSERT(entities.empty());
     if (!fetch_and_validate_subop(entities))
       break;
-    op = new OperationToggleTableMaintenance(m_context, m_table_name,
+    op = new OperationToggleTableMaintenance(m_context, m_name,
                                              TableMaintenance::ON);
     stage_subop(op);
     entities.push_back(op);
@@ -181,14 +181,14 @@ void OperationRecreateIndexTables::execute() {
   }
 
   HT_INFOF("Leaving RecreateIndexTables-%lld (table=%s, parts=%s) state=%s",
-           (Lld)header.id, m_table_name.c_str(),
-           m_table_parts.to_string().c_str(),
+           (Lld)header.id, m_name.c_str(),
+           m_parts.to_string().c_str(),
            OperationState::get_text(get_state()));
 }
 
 void OperationRecreateIndexTables::display_state(std::ostream &os) {
-  os << " table_name=" << m_table_name
-     << " parts=" << m_table_parts.to_string()
+  os << " table_name=" << m_name
+     << " parts=" << m_parts.to_string()
      << " sub_op="  << m_subop_hash_code;
 }
 
@@ -199,13 +199,13 @@ uint16_t OperationRecreateIndexTables::encoding_version() const {
 }
 
 size_t OperationRecreateIndexTables::encoded_state_length() const {
-  return Serialization::encoded_length_vstr(m_table_name) +
-    m_table_parts.encoded_length() + 8;
+  return Serialization::encoded_length_vstr(m_name) +
+    m_parts.encoded_length() + 8;
 }
 
 void OperationRecreateIndexTables::encode_state(uint8_t **bufp) const {
-  Serialization::encode_vstr(bufp, m_table_name);
-  m_table_parts.encode(bufp);
+  Serialization::encode_vstr(bufp, m_name);
+  m_parts.encode(bufp);
   Serialization::encode_i64(bufp, m_subop_hash_code);
 }
 
@@ -215,8 +215,8 @@ void OperationRecreateIndexTables::decode_state(const uint8_t **bufp, size_t *re
 }
 
 void OperationRecreateIndexTables::decode_request(const uint8_t **bufp, size_t *remainp) {
-  m_table_name = Serialization::decode_vstr(bufp, remainp);
-  m_table_parts.decode(bufp, remainp);
+  m_name = Serialization::decode_vstr(bufp, remainp);
+  m_parts.decode(bufp, remainp);
 }
 
 const String OperationRecreateIndexTables::name() {
@@ -225,20 +225,20 @@ const String OperationRecreateIndexTables::name() {
 
 const String OperationRecreateIndexTables::label() {
   return format("Recreate Index Tables (table=%s, parts=%s)",
-                m_table_name.c_str(), m_table_parts.to_string().c_str());
+                m_name.c_str(), m_parts.to_string().c_str());
 }
 
 bool OperationRecreateIndexTables::fetch_schema(std::string &schema) {
   string table_id;
   bool is_namespace;
-  if (m_context->namemap->name_to_id(m_table_name, table_id, &is_namespace)) {
+  if (m_context->namemap->name_to_id(m_name, table_id, &is_namespace)) {
     if (is_namespace) {
-      complete_error(Error::TABLE_NOT_FOUND, format("%s is a namespace", m_table_name.c_str()));
+      complete_error(Error::TABLE_NOT_FOUND, format("%s is a namespace", m_name.c_str()));
       return false;
     }
   }
   else {
-    complete_error(Error::TABLE_NOT_FOUND, m_table_name);
+    complete_error(Error::TABLE_NOT_FOUND, m_name);
     return false;
   }
   DynamicBuffer value_buf;
@@ -253,11 +253,9 @@ bool OperationRecreateIndexTables::fetch_and_validate_subop(vector<Entity *> &en
   if (m_subop_hash_code) {
     OperationPtr op = m_context->reference_manager->get(m_subop_hash_code);
     op->remove_approval_add(0x01);
-    op->mark_for_removal();
     m_subop_hash_code = 0;
     if (op->get_error()) {
       complete_error(op->get_error(), op->get_error_msg(), op.get());
-      m_context->reference_manager->remove(op);
       return false;
     }
     entities.push_back(op.get());

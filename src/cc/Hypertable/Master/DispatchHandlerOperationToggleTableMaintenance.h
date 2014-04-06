@@ -70,7 +70,7 @@ namespace Hypertable {
 
   private:
 
-    /// %Table identifier of table to be compacted
+    /// %Table identifier of table for which maintenance is to be toggled
     TableIdentifierManaged m_table;
 
     /// Flag indicating if maintenance is to be toggled on or off
