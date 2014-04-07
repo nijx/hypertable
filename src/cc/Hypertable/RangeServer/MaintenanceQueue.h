@@ -19,10 +19,9 @@
  * 02110-1301, USA.
  */
 
-/** @file
- * Declarations for MaintenanceQueue
- * This file contains the type declarations for the MaintenanceQueue
- */
+/// @file
+/// Declarations for MaintenanceQueue
+/// This file contains the type declarations for the MaintenanceQueue
 
 #ifndef HYPERTABLE_MAINTENANCEQUEUE_H
 #define HYPERTABLE_MAINTENANCEQUEUE_H

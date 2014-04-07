@@ -343,10 +343,9 @@ RangeServer::RangeServer(PropertiesPtr &props, ConnectionManagerPtr &conn_mgr,
 
   Global::log_prune_threshold_max = cfg.get_i64("CommitLog.PruneThreshold.Max", threshold_max);
 
-  /**
-   * Create maintenance scheduler
-   */
-  m_maintenance_scheduler = new MaintenanceScheduler(Global::maintenance_queue, m_context->live_map);
+  m_maintenance_scheduler =
+    std::make_shared<MaintenanceScheduler>(Global::maintenance_queue,
+                                           m_context->live_map);
 
   // Install maintenance timer
   m_timer_handler = new TimerHandler(m_context->comm, this);
@@ -3553,7 +3552,7 @@ RangeServer::group_commit_add(EventPtr &event, uint64_t cluster_id,
                               uint32_t flags) {
   ScopedLock lock(m_mutex);
   if (!m_group_commit) {
-    m_group_commit = new GroupCommit(this);
+    m_group_commit = std::make_shared<GroupCommit>(this);
     HT_ASSERT(!m_group_commit_timer_handler);
     m_group_commit_timer_handler = new GroupCommitTimerHandler(m_context->comm, this, m_app_queue);
   }

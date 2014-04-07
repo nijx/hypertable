@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -18,6 +18,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
  */
+
+/// @file
+/// Definitions for MaintenanceScheduler.
+/// This file contains type definitions for MaintenanceScheduler, a class for
+/// scheduling range server maintenance (e.g. compactions, splits, memory
+/// purging, ...).
+
 #include <Common/Compat.h>
 #include "MaintenanceScheduler.h"
 
@@ -488,12 +495,12 @@ bool MaintenanceScheduler::debug_signal_file_exists(boost::xtime now) {
 
 
 void MaintenanceScheduler::write_debug_output(boost::xtime now, Ranges &ranges,
-                                              const String &trace_str) {
+                                              const String &header_str) {
   AccessGroup::MaintenanceData *ag_data;
   String output_fname = System::install_dir + "/run/scheduler.output";
   ofstream out;
   out.open(output_fname.c_str());
-  out << trace_str << "\n";
+  out << header_str << "\n";
   foreach_ht (RangeData &rd, ranges.array) {
     out << *rd.data << "\n";
     for (ag_data = rd.data->agdata; ag_data; ag_data = ag_data->next)

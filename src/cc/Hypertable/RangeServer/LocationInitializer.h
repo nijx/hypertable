@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,8 +19,13 @@
  * 02110-1301, USA.
  */
 
-#ifndef HYPERTABLE_LOCATIONINITIALIZER_H
-#define HYPERTABLE_LOCATIONINITIALIZER_H
+/// @file
+/// Declarations for LocationInitializer.
+/// This file contains type declarations for LocationInitializer, a class used
+/// to obtain the location string (<i>proxy name</i>) for the range server.
+
+#ifndef Hypertable_RangeServer_LocationInitializer_h
+#define Hypertable_RangeServer_LocationInitializer_h
 
 #include <Hypertable/RangeServer/Context.h>
 
@@ -35,9 +40,15 @@
 
 namespace Hypertable {
 
+  /// @addtogroup RangeServer
+  /// @{
+
+  /// Obtains location string (<i>proxy name</i>) for the range server.
   class LocationInitializer : public ConnectionInitializer {
 
   public:
+    /// Constructor.
+    /// @param context %Range server context
     LocationInitializer(std::shared_ptr<Context> &context);
     virtual bool is_removed(const String &path, Hyperspace::SessionPtr &hyperspace);
     virtual CommBuf *create_initialization_request();
@@ -48,7 +59,9 @@ namespace Hypertable {
     void set_lock_held() { m_lock_held=true; }
 
   private:
+    /// %Range server context
     std::shared_ptr<Context> m_context;
+    /// %Mutex for serializing concurrent access.
     Mutex m_mutex;
     boost::condition m_cond;
     String m_location;
@@ -57,9 +70,9 @@ namespace Hypertable {
     bool m_handshake_complete {};
     bool m_lock_held {};
   };
-  typedef boost::intrusive_ptr<LocationInitializer> LocationInitializerPtr;
 
+  /// @}
 }
 
 
-#endif // HYPERTABLE_LOCATIONINITIALIZER_H
+#endif // Hypertable_RangeServer_LocationInitializer_h

@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,6 +19,11 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for MemoryTracker.
+/// This file contains type declarations for MemoryTracker, a class used to
+/// track range server memory used.
+
 #ifndef HYPERTABLE_MEMORYTRACKER_H
 #define HYPERTABLE_MEMORYTRACKER_H
 
@@ -31,21 +36,38 @@
 
 namespace Hypertable {
 
+  /// @addtogroup RangeServer
+  /// @{
+
+  /// Tracks range server memory used.
   class MemoryTracker {
   public:
-    MemoryTracker(FileBlockCache *block_cache, QueryCachePtr query_cache) 
-      : m_memory_used(0), m_block_cache(block_cache), m_query_cache(query_cache) { }
 
+    /// Constructor.
+    /// @param block_cache Pointer to block cache
+    /// @param query_cache Pointer to query cache
+    MemoryTracker(FileBlockCache *block_cache, QueryCachePtr query_cache) 
+      : m_block_cache(block_cache), m_query_cache(query_cache) { }
+
+    /// Add to memory used.
+    /// @param amount Amount of memory to add
     void add(int64_t amount) {
       ScopedLock lock(m_mutex);
       m_memory_used += amount;
     }
 
+    /// Subtract to memory used.
+    /// @param amount Amount of memory to subtract
     void subtract(int64_t amount) {
       ScopedLock lock(m_mutex);
       m_memory_used -= amount;
     }
 
+    /// Return total range server memory used.
+    /// This member function returns the total amount of memory used, computed
+    /// as #m_memory_used plus block cache memory used plus query cache memory
+    /// used.
+    /// @return Total range server memory used
     int64_t balance() {
       ScopedLock lock(m_mutex);
       return m_memory_used + (m_block_cache ? m_block_cache->memory_used() : 0) +
@@ -53,11 +75,21 @@ namespace Hypertable {
     }
 
   private:
+
+    /// %Mutex to serialize concurrent access
     Mutex m_mutex;
-    int64_t m_memory_used;
+
+    /// Current range server memory used
+    int64_t m_memory_used {};
+
+    /// Pointer to block cache
     FileBlockCache *m_block_cache;
+
+    /// Pointer to query cache
     QueryCachePtr m_query_cache;
   };
+
+  /// @}
 
 }
 

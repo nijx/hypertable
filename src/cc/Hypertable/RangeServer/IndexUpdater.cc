@@ -1,12 +1,12 @@
-/** -*- c++ -*-
- * Copyright (C) 2011 Hypertable Inc.
+/*
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
  * Hypertable is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; version 2 of the
- * License, or any later version.
+ * as published by the Free Software Foundation; either version 3
+ * of the License, or any later version.
  *
  * Hypertable is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,7 +19,13 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
+/// @file
+/// Definitions for IndexUpdater.
+/// This file contains type definitions for IndexUpdater, a class for keeping
+/// index tables up-to-date.
+
+
+#include <Common/Compat.h>
 #include "IndexUpdater.h"
 
 #include <Hypertable/Lib/IndexTables.h>
@@ -117,7 +123,7 @@ void IndexUpdater::add(const Key &key, const ByteString &value) {
 }
 
 
-IndexUpdater *IndexUpdaterFactory::create(const String &table_id,
+IndexUpdaterPtr IndexUpdaterFactory::create(const String &table_id,
                     SchemaPtr &schema, bool has_index, bool has_qualifier_index)
 {
   TablePtr index_table;
@@ -135,7 +141,7 @@ IndexUpdater *IndexUpdaterFactory::create(const String &table_id,
 
   if ((has_index && index_table) 
         && (has_qualifier_index && qualifier_index_table)) {
-    return new IndexUpdater(schema, index_table, qualifier_index_table);
+    return std::make_shared<IndexUpdater>(schema, index_table, qualifier_index_table);
   }
 
   // at least one index table was not cached: load it
@@ -171,9 +177,9 @@ IndexUpdater *IndexUpdaterFactory::create(const String &table_id,
   }
 
   if (index_table || qualifier_index_table)
-    return new IndexUpdater(schema, index_table, qualifier_index_table);
+    return std::make_shared<IndexUpdater>(schema, index_table, qualifier_index_table);
   else
-    return (0);
+    return IndexUpdaterPtr(0);
 }
 
 void IndexUpdaterFactory::close()

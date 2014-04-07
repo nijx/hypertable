@@ -176,8 +176,8 @@ namespace Hypertable {
     /// Returns serialized state length.
     /// This method returns the length of the serialized representation of the
     /// object state.
-    /// @return Serialized length
-    /// @see encode() for a description of the serialized format.
+    /// @return Serialized length.
+    /// @see encode() for a description of the serialized %format.
     virtual size_t encoded_state_length() const;
 
     /// Writes serialized encoding of object state.
@@ -209,7 +209,7 @@ namespace Hypertable {
     /// @param bufp Address of source buffer pointer (advanced by call)
     /// @param remainp Amount of remaining buffer pointed to by <code>*bufp</code>
     /// (decremented by call)
-    /// @ee encode() for a description of the serialized format.
+    /// @see encode() for a description of the serialized %format.
     virtual void decode_state(const uint8_t **bufp, size_t *remainp);
 
     /// Decodes a request that triggered the operation.

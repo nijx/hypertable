@@ -1,5 +1,5 @@
-/* -*- c++ -*-
- * Copyright (C) 2007-2013 Hypertable, Inc.
+/*
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -18,25 +18,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
  */
-#include "Common/Compat.h"
-#include "Common/Config.h"
-#include "Common/FileUtils.h"
-#include "Common/Logger.h"
-#include "Common/Serialization.h"
-#include "Common/StatsSystem.h"
-#include "Common/Path.h"
-#include "Common/md5.h"
-#include "Common/ScopeGuard.h"
+
+/// @file
+/// Definitions for LocationInitializer.
+/// This file contains type definitions for LocationInitializer, a class used
+/// to obtain the location string (<i>proxy name</i>) for the range server.
+
+#include <Common/Compat.h>
+#include "LocationInitializer.h"
+
+#include <Hypertable/Lib/MasterProtocol.h>
+#include <Hypertable/Lib/SystemVariable.h>
+
+#include <Hyperspace/Session.h>
+
+#include <Common/Config.h>
+#include <Common/FileUtils.h>
+#include <Common/Logger.h>
+#include <Common/Serialization.h>
+#include <Common/StatsSystem.h>
+#include <Common/Path.h>
+#include <Common/md5.h>
+#include <Common/ScopeGuard.h>
 
 #include <boost/algorithm/string.hpp>
-
-#include "Hypertable/Lib/MasterProtocol.h"
-#include "Hypertable/Lib/SystemVariable.h"
-
-#include "Hyperspace/Session.h"
-
-#include "Global.h"
-#include "LocationInitializer.h"
 
 using namespace Hypertable;
 using namespace Serialization;

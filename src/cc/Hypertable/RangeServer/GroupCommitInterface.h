@@ -1,5 +1,5 @@
 /* -*- c++ -*-
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -32,8 +32,9 @@
 
 #include <AsyncComm/Event.h>
 
-#include <Common/ReferenceCount.h>
 #include <Common/StaticBuffer.h>
+
+#include <memory>
 
 namespace Hypertable {
 
@@ -49,7 +50,7 @@ namespace Hypertable {
   /// a bottleneck.  This class acts as an interface class to the group
   /// commit implementation and provides a way for the group commit system
   /// and the RangeServer to reference one another.
-  class GroupCommitInterface : public ReferenceCount {
+  class GroupCommitInterface {
   public:
 
     /// Adds a batch of updates to the group commit queue.
@@ -62,7 +63,7 @@ namespace Hypertable {
   };
 
   /// Smart pointer to GroupCommitInterface
-  typedef boost::intrusive_ptr<GroupCommitInterface> GroupCommitInterfacePtr;
+  typedef std::shared_ptr<GroupCommitInterface> GroupCommitInterfacePtr;
 
   /// @}
 }

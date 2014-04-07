@@ -34,30 +34,38 @@ namespace Hypertable {
   /// @addtogroup Master
   /// @{
 
+  /// %Table maintenance constants
   namespace TableMaintenance {
+    /// Constant representing <i>off</i>
     const bool OFF = false;
+    /// Constant representing <i>on</i>
     const bool ON = true;
   }
 
-  /// Temporarily suspends maintenance for a table
+  /// Enables or disables maintenance for a table.
   class OperationToggleTableMaintenance : public Operation {
   public:
 
     /// Constructor.
+    /// Initializes object by passing
+    /// MetaLog::EntityType::OPERATION_TOGGLE_TABLE_MAINTENANCE to parent Operation
+    /// constructor and then initializes member variables as follows:
+    ///   - Sets #m_name to canonicalized <code>table_name</code>
+    ///   - Adds INIT as a dependency
     /// @param context %Master context
-    /// @param table_name Full table pathname
+    /// @param table_name %Table pathname
     /// @param toggle_on Flag indicating if maintenance is to be turned on or off
     OperationToggleTableMaintenance(ContextPtr &context,
                                     const std::string &table_name,
                                     bool toggle_on);
 
-    /// Constructor for constructing object from %MetaLog entry.
+    /// Constructor with MML entity.
     /// @param context %Master context
     /// @param header %MetaLog header
     OperationToggleTableMaintenance(ContextPtr &context,
                                     const MetaLog::EntityHeader &header);
     
-    /// Destructor. */
+    /// Destructor.
     virtual ~OperationToggleTableMaintenance() { }
 
     /// Carries out the manual compaction operation.
@@ -71,36 +79,48 @@ namespace Hypertable {
     /// <tr>
     /// <td>INITIAL</td>
     /// <td><ul>
-    /// <li>If a table name was supplied, it maps it to a table identifier (#m_id)</li>
-    /// <li>If supplied table name not found in name map, completes with
-    /// Error::TABLE_NOT_FOUND</li>
-    /// <li>Otherwise, sets dependencies to Dependency::METADATA and transitions
-    /// to SCAN_METADATA</li>
+    /// <li>Maps table name (#m_name) to table ID and stores in #m_id</li>
+    /// <li>Transitions state to UPDATE_HYPERSPACE</li>
+    /// <li>Persists operation to MML and drops through to next state</li>
+    /// </ul></td>
+    /// </tr>
+    /// <tr>
+    /// <td>UPDATE_HYPERSPACE</td>
+    /// <td><ul>
+    /// <li>If #m_toggle_on is <i>true</i>, deletes the "maintenance_disabled"
+    ///     attribute of the table ID file in Hyperspace</li>
+    /// <li>Otherwise, if #m_toggle_on is <i>false</i>, sets the
+    ///     "maintenance_disabled" attribute of the table ID file in
+    ///     Hyperspace</li>
+    /// <li>Dependencies are set to METADATA and #m_id + " move range"</li>
+    /// <li>Transitions state to SCAN_METADATA</li>
+    /// <li>Persists operation to MML and returns</li>
     /// </ul></td>
     /// </tr>
     /// <tr>
     /// <td>SCAN_METADATA</td>
     /// <td><ul>
-    /// <li>Scans the METADATA table and populates #m_servers to hold the set
-    /// of servers that hold the table to be compacted which are not in the
-    /// #m_completed set.  If no table name was supplied, then #m_servers is
-    /// set to all available servers which are not in the #m_completed set</li>
-    /// <li>Dependencies are set to server names in #m_servers</li>
-    /// <li>Transitions to the ISSUE_REQUESTS state</li>
+    /// <li>Obtains list of servers via call to
+    ///     Utility::get_table_server_set()</li>
+    /// <li>For each server in #m_completed, removes server as dependency</li>
+    /// <li>For each server not in #m_completed, adds server as dependency</li>
+    /// <li>Transitions state to ISSUE_REQUESTS</li>
     /// <li>Persists operation to MML and returns</li>
     /// </ul></td>
     /// </tr>
     /// <tr>
     /// <td>ISSUE_REQUESTS</td>
     /// <td><ul>
-    /// <li>Issues a compact request to all servers in #m_servers and waits
-    /// for their completion</li>
-    /// <li>If there are any errors, for each server that was successful or
-    /// returned with Error::TABLE_NOT_FOUND,
-    /// the server name is added to #m_completed.  Dependencies are then set back
-    /// to just Dependency::METADATA, the state is reset back to SCAN_METADATA,
-    /// the operation is persisted to the MML, and the method returns</li>
-    /// <li>Otherwise state is transitioned to COMPLETED</li>
+    /// <li>Issues a toggle maintenance request to all servers in #m_servers and
+    ///     waits for their completion</li>
+    /// <li>If any of the requests failed, the servers of the successfully
+    ///     completed requests are added to #m_completed, the servers in
+    ///     #m_servers are removed as dependencies, METADATA is added as a
+    ///     dependency, #m_servers is cleared, state is transitioned back to
+    ///     SCAN_METADATA, the operation sleeps for 5 seconds, the operation is
+    ///     persisted to the MML and then the function returns</li>
+    /// <li>Otherwise, if all requsts completed successfully, the operation is
+    ///     completed with a call to complete_ok()</li>
     /// </ul></td>
     /// </tr>
     /// </table>
@@ -122,8 +142,9 @@ namespace Hypertable {
 
     /// Returns serialized state length.
     /// This method returns the length of the serialized representation of the
-    /// object state.  See encode() for a description of the serialized format.
+    /// object state.
     /// @return Serialized length
+    /// @see encode() for a description of the serialized %format.
     virtual size_t encoded_state_length() const;
 
     /// Writes serialized encoding of object state.
@@ -135,16 +156,20 @@ namespace Hypertable {
     ///   <th>Encoding</th><th>Description</th>
     ///   </tr>
     ///   <tr>
-    ///   <td>vstr</td><td>Pathname of table to compact</td>
+    ///   <td>vstr</td><td>%Table name (#m_name)</td>
     ///   </tr>
     ///   <tr>
-    ///   <td>vstr</td><td>Row key of range to compact</td>
+    ///   <td>vstr</td><td>%Table ID (#m_id)</td>
     ///   </tr>
     ///   <tr>
-    ///   <td>i32</td><td>Compaction flags (see RangeServerProtocol::CompactionFlags)</td>
+    ///   <td>bool</td><td>Flag indicating if maintenance is to be enabled or
+    ///                    disabled (#m_toggle_on)</td>
     ///   </tr>
     ///   <tr>
-    ///   <td>vstr</td><td>%Table identifier</td>
+    ///   <td>i32</td><td>Size of #m_servers</td>
+    ///   </tr>
+    ///   <tr>
+    ///   <td>vstr</td><td><b>Foreach server</b> in #m_servers, server name</td>
     ///   </tr>
     ///   <tr>
     ///   <td>i32</td><td>Size of #m_completed</td>
@@ -153,11 +178,6 @@ namespace Hypertable {
     ///   <td>vstr</td><td><b>Foreach server</b> in #m_completed, server name</td>
     ///   </tr>
     ///   <tr>
-    ///   <td>i32</td><td>[VERSION 2] Size of #m_servers</td>
-    ///   </tr>
-    ///   <tr>
-    ///   <td>vstr</td><td>[VERSION 2] <b>Foreach server</b> in #m_servers, server name</td>
-    ///   </tr>
     /// </table>
     /// @param bufp Address of destination buffer pointer (advanced by call)
     virtual void encode_state(uint8_t **bufp) const;
@@ -165,25 +185,25 @@ namespace Hypertable {
     /// Reads serialized encoding of object state.
     /// This method restores the state of the object by decoding a serialized
     /// representation of the state from the memory location pointed to by
-    /// <code>*bufp</code>.  See encode() for a description of the
-    /// serialized format.
+    /// <code>*bufp</code>.
     /// @param bufp Address of source buffer pointer (advanced by call)
     /// @param remainp Amount of remaining buffer pointed to by <code>*bufp</code>
     /// (decremented by call)
+    /// @see encode() for a description of the serialized %format.
     virtual void decode_state(const uint8_t **bufp, size_t *remainp);
 
   private:
 
-    /// Full pathname of table name to compact
-    std::string m_table_name;
+    /// %Table pathname
+    std::string m_name;
 
-    /// Full pathname of table ID to compact
-    std::string m_table_id;
+    /// %Table ID
+    std::string m_id;
 
-    /// Set of range servers participating in suspend/resume
+    /// Set of range servers participating in toggle
     std::set<std::string> m_servers;
 
-    /// Set of range servers that have completed suspend/resume
+    /// Set of range servers that have completed toggle
     std::set<std::string> m_completed;
 
     /// Flag indicating if maintenance is to be toggled on or off

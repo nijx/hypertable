@@ -19,6 +19,11 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for Context.
+/// This file contains type declarations for Context, a class to hold references
+/// to commonly needed services and data structures.
+
 #ifndef Hypertable_RangeServer_Context_h
 #define Hypertable_RangeServer_Context_h
 
@@ -33,15 +38,26 @@
 
 namespace Hypertable {
 
+  /// @addtogroup RangeServer
+  /// @{
+
+  /// Holds references to commonly needed services and data structures.
   class Context {
   public:
+    /// Configuration properties
     PropertiesPtr props;
+    /// Comm layer
     Comm *comm {};
+    /// Server state
     std::shared_ptr<ServerState> server_state;
+    /// Live table info map
     TableInfoMapPtr live_map;
   };
 
+  /// Smart pointer to Context
   typedef std::shared_ptr<Context> ContextPtr;
+
+  /// @}
 
 }
 

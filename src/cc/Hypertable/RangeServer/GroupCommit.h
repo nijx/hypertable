@@ -32,8 +32,13 @@
 
 namespace Hypertable {
 
+  /// @addtogroup RangeServer
+  /// @{
+
+  /// Structure for holding cluster ID / table identifier pair
   typedef std::pair<uint64_t, TableIdentifier> ClusterTableIdPair;
 
+  /// Comparison functor for ClusterTableIdPair objects.
   struct lt_ctip {
     bool operator()(const ClusterTableIdPair &key1, const ClusterTableIdPair &key2) const {
       if (key1.first != key2.first)
@@ -50,11 +55,15 @@ namespace Hypertable {
     }
   };
 
-  /**
-   */
+  /// Group commit manager.
   class GroupCommit : public GroupCommitInterface {
 
   public:
+
+    /// Constructor.
+    /// Initializes #m_commit_interval to value of
+    /// <code>Hypertable.RangeServer.CommitInterval</code> property.
+    /// @param range_server Pointer to RangeServer object
     GroupCommit(RangeServer *range_server);
     virtual void add(EventPtr &event, uint64_t cluster_id, SchemaPtr &schema,
                      const TableIdentifier *table, uint32_t count,
@@ -62,14 +71,21 @@ namespace Hypertable {
     virtual void trigger();
 
   private:
-    Mutex         m_mutex;
+    /// %Mutex to serialize concurrent access
+    Mutex m_mutex;
+    /// Pointer to RangeServer
     RangeServer  *m_range_server;
-    uint32_t      m_commit_interval;
-    int           m_counter;
+    /// Cached copy of <code>Hypertable.RangeServer.CommitInterval</code>
+    /// property
+    uint32_t m_commit_interval {};
+    /// Trigger iteration counter
+    int m_counter {};
+    /// %String cache for holding table IDs
     FlyweightString m_flyweight_strings;
 
     std::map<ClusterTableIdPair, UpdateRecTable *, lt_ctip> m_table_map;
   };
+  /// @}
 }
 
 #endif // HYPERSPACE_GROUPCOMMIT_H

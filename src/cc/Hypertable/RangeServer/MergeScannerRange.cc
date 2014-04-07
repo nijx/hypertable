@@ -1,5 +1,5 @@
-/** -*- c++ -*-
- * Copyright (C) 2007-2012 Hypertable, Inc.
+/*
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -19,18 +19,22 @@
  * 02110-1301, USA.
  */
 
-#include "Common/Compat.h"
-#include <cassert>
+/// @file
+/// Definitions for MergeScannerRange.
+/// This file contains type definitions for MergeScannerRange, a class used for
+/// performing a scan over a range.
 
-#include "Common/Logger.h"
-
-#include "Hypertable/Lib/Key.h"
-
+#include <Common/Compat.h>
 #include "MergeScannerRange.h"
+
+#include <Hypertable/Lib/Key.h>
+
+#include <Common/Logger.h>
+
+#include <cassert>
 
 using namespace Hypertable;
 using namespace std;
-
 
 MergeScannerRange::MergeScannerRange(const string &table_id, ScanContextPtr &scan_ctx) 
   : MergeScanner(scan_ctx), m_cell_offset(0), m_cell_skipped(0), 

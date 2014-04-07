@@ -18,6 +18,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
  */
+
 #include <Common/Compat.h>
 #include "LogReplayBarrier.h"
 
@@ -49,69 +50,69 @@ void LogReplayBarrier::set_user_complete() {
   m_user_complete_cond.notify_all();
 }
 
-bool LogReplayBarrier::wait_for_root(boost::xtime expire_time) {
+bool LogReplayBarrier::wait_for_root(boost::xtime deadline) {
   if (m_root_complete)
     return true;
   ScopedLock lock(m_mutex);
   while (!m_root_complete) {
     HT_INFO("Waiting for ROOT recovery to complete...");
-    if (!m_root_complete_cond.timed_wait(lock, expire_time))
+    if (!m_root_complete_cond.timed_wait(lock, deadline))
       return false;
   }
   return true;
 }
 
-bool LogReplayBarrier::wait_for_metadata(boost::xtime expire_time) {
+bool LogReplayBarrier::wait_for_metadata(boost::xtime deadline) {
   if (m_metadata_complete)
     return true;
   ScopedLock lock(m_mutex);
   while (!m_metadata_complete) {
     HT_INFO("Waiting for METADATA recovery to complete...");
-    if (!m_metadata_complete_cond.timed_wait(lock, expire_time))
+    if (!m_metadata_complete_cond.timed_wait(lock, deadline))
       return false;
   }
   return true;
 }
 
-bool LogReplayBarrier::wait_for_system(boost::xtime expire_time) {
+bool LogReplayBarrier::wait_for_system(boost::xtime deadline) {
   if (m_system_complete)
     return true;
   ScopedLock lock(m_mutex);
   while (!m_system_complete) {
     HT_INFO("Waiting for SYSTEM recovery to complete...");
-    if (!m_system_complete_cond.timed_wait(lock, expire_time))
+    if (!m_system_complete_cond.timed_wait(lock, deadline))
       return false;
   }
   return true;
 }
 
-bool LogReplayBarrier::wait_for_user(boost::xtime expire_time) {
+bool LogReplayBarrier::wait_for_user(boost::xtime deadline) {
   if (m_user_complete)
     return true;
   ScopedLock lock(m_mutex);
   while (!m_user_complete) {
     HT_INFO("Waiting for USER recovery to complete...");
-    if (!m_user_complete_cond.timed_wait(lock, expire_time))
+    if (!m_user_complete_cond.timed_wait(lock, deadline))
       return false;
   }
   return true;
 }
 
 bool
-LogReplayBarrier::wait(boost::xtime expire_time,
+LogReplayBarrier::wait(boost::xtime deadline,
                       const TableIdentifier *table,
                       const RangeSpec *range_spec) {
   if (m_user_complete)
     return true;
   if (table->is_metadata()) {
     if (range_spec && !strcmp(range_spec->end_row, Key::END_ROOT_ROW))
-      return wait_for_root(expire_time);
+      return wait_for_root(deadline);
     else
-      return wait_for_metadata(expire_time);
+      return wait_for_metadata(deadline);
   }
   else if (table->is_system())
-    return wait_for_system(expire_time);
-  return wait_for_user(expire_time);
+    return wait_for_system(deadline);
+  return wait_for_user(deadline);
 }
 
 bool LogReplayBarrier::user_complete() {

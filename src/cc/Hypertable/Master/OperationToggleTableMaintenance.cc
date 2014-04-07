@@ -50,8 +50,8 @@ OperationToggleTableMaintenance::OperationToggleTableMaintenance(ContextPtr &con
                                                                  const std::string &table_name,
                                                                  bool toggle_on)
   : Operation(context, MetaLog::EntityType::OPERATION_TOGGLE_TABLE_MAINTENANCE),
-    m_table_name(table_name), m_toggle_on(toggle_on) {
-  Utility::canonicalize_pathname(m_table_name);
+    m_name(table_name), m_toggle_on(toggle_on) {
+  Utility::canonicalize_pathname(m_name);
   add_dependency(Dependency::INIT);
 }
 
@@ -66,20 +66,20 @@ void OperationToggleTableMaintenance::execute() {
   int32_t state = get_state();
 
   HT_INFOF("Entering ToggleTableMaintenance-%lld (table=%s %s) state=%s",
-           (Lld)header.id, m_table_name.c_str(), m_toggle_on ? "ON" : "OFF",
+           (Lld)header.id, m_name.c_str(), m_toggle_on ? "ON" : "OFF",
            OperationState::get_text(state));
 
   switch (state) {
 
   case OperationState::INITIAL:
-    if (m_context->namemap->name_to_id(m_table_name, m_table_id, &is_namespace)) {
+    if (m_context->namemap->name_to_id(m_name, m_id, &is_namespace)) {
       if (is_namespace) {
-        complete_error(Error::TABLE_NOT_FOUND, format("%s is a namespace", m_table_name.c_str()));
+        complete_error(Error::TABLE_NOT_FOUND, format("%s is a namespace", m_name.c_str()));
         break;
       }
     }
     else {
-      complete_error(Error::TABLE_NOT_FOUND, m_table_name);
+      complete_error(Error::TABLE_NOT_FOUND, m_name);
       break;
     }
     set_state(OperationState::UPDATE_HYPERSPACE);
@@ -90,7 +90,7 @@ void OperationToggleTableMaintenance::execute() {
 
   case OperationState::UPDATE_HYPERSPACE:
     try {
-      String tablefile = m_context->toplevel_dir + "/tables/" + m_table_id;
+      String tablefile = m_context->toplevel_dir + "/tables/" + m_id;
       if (m_toggle_on) {
         uint64_t handle = 0;
         HT_ON_SCOPE_EXIT(&Hyperspace::close_handle_ptr, m_context->hyperspace, &handle);
@@ -103,7 +103,7 @@ void OperationToggleTableMaintenance::execute() {
     catch (Exception &e) {
       if (e.code() != Error::HYPERSPACE_ATTR_NOT_FOUND) {
         HT_ERRORF("Problem %s 'maintenance_disabled' attr for %s (%s, %s)",
-                  m_toggle_on ? "setting" : "deleting", m_table_id.c_str(),
+                  m_toggle_on ? "setting" : "deleting", m_id.c_str(),
                   Error::get_text(e.code()), e.what());
         complete_error(e);
         break;
@@ -114,7 +114,7 @@ void OperationToggleTableMaintenance::execute() {
       ScopedLock lock(m_mutex);
       m_dependencies.erase(Dependency::INIT);
       m_dependencies.insert(Dependency::METADATA);
-      m_dependencies.insert(m_table_id + " move range");
+      m_dependencies.insert(m_id + " move range");
       m_state = OperationState::SCAN_METADATA;
     }
     m_context->mml_writer->record_state(this);
@@ -127,7 +127,7 @@ void OperationToggleTableMaintenance::execute() {
 
       // Determine servers that hold the table's ranges
       if (!m_context->test_mode)
-        Utility::get_table_server_set(m_context, m_table_id, "", servers);
+        Utility::get_table_server_set(m_context, m_id, "", servers);
       else
         m_context->get_available_servers(servers);
 
@@ -153,7 +153,7 @@ void OperationToggleTableMaintenance::execute() {
   case OperationState::ISSUE_REQUESTS:
     if (!m_context->test_mode) {
       TableIdentifier table;
-      table.id = m_table_id.c_str();
+      table.id = m_id.c_str();
       table.generation = 0;
       DispatchHandlerOperationPtr op_handler =
         new DispatchHandlerOperationToggleTableMaintenance(m_context, table, m_toggle_on);
@@ -193,13 +193,13 @@ void OperationToggleTableMaintenance::execute() {
   }
 
   HT_INFOF("Leaving ToggleTableMaintenance-%lld (table=%s %s) state=%s",
-           (Lld)header.id, m_table_name.c_str(), m_toggle_on ? "ON" : "OFF",
+           (Lld)header.id, m_name.c_str(), m_toggle_on ? "ON" : "OFF",
            OperationState::get_text(get_state()));
 }
 
 
 void OperationToggleTableMaintenance::display_state(std::ostream &os) {
-  os << " table_name=" << m_table_name << " table_id=" << m_table_id
+  os << " table_name=" << m_name << " table_id=" << m_id
      << " " << (m_toggle_on ? "ON" : "OFF");
 }
 
@@ -210,8 +210,8 @@ uint16_t OperationToggleTableMaintenance::encoding_version() const {
 }
 
 size_t OperationToggleTableMaintenance::encoded_state_length() const {
-  size_t length = 1 + Serialization::encoded_length_vstr(m_table_name) +
-    Serialization::encoded_length_vstr(m_table_id);
+  size_t length = 1 + Serialization::encoded_length_vstr(m_name) +
+    Serialization::encoded_length_vstr(m_id);
   length += 4;
   foreach_ht (const String &location, m_servers)
     length += Serialization::encoded_length_vstr(location);
@@ -222,8 +222,8 @@ size_t OperationToggleTableMaintenance::encoded_state_length() const {
 }
 
 void OperationToggleTableMaintenance::encode_state(uint8_t **bufp) const {
-  Serialization::encode_vstr(bufp, m_table_name);
-  Serialization::encode_vstr(bufp, m_table_id);
+  Serialization::encode_vstr(bufp, m_name);
+  Serialization::encode_vstr(bufp, m_id);
   Serialization::encode_bool(bufp, m_toggle_on);
   Serialization::encode_i32(bufp, m_servers.size());
   foreach_ht (const String &location, m_servers)
@@ -234,8 +234,8 @@ void OperationToggleTableMaintenance::encode_state(uint8_t **bufp) const {
 }
 
 void OperationToggleTableMaintenance::decode_state(const uint8_t **bufp, size_t *remainp) {
-  m_table_name = Serialization::decode_vstr(bufp, remainp);
-  m_table_id = Serialization::decode_vstr(bufp, remainp);
+  m_name = Serialization::decode_vstr(bufp, remainp);
+  m_id = Serialization::decode_vstr(bufp, remainp);
   m_toggle_on = Serialization::decode_bool(bufp, remainp);
   size_t length = Serialization::decode_i32(bufp, remainp);
   for (size_t i=0; i<length; i++)
@@ -251,5 +251,5 @@ const String OperationToggleTableMaintenance::name() {
 
 const String OperationToggleTableMaintenance::label() {
   return format("Toggle Table Maintenance (table=%s, %s)",
-                m_table_name.c_str(), m_toggle_on ? "ON" : "OFF");
+                m_name.c_str(), m_toggle_on ? "ON" : "OFF");
 }

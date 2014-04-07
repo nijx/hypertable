@@ -1,4 +1,4 @@
-/* -*- c++ -*-
+/*
  * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -30,7 +30,7 @@
 using namespace Hypertable;
 using namespace Hypertable::Config;
 
-GroupCommit::GroupCommit(RangeServer *range_server) : m_range_server(range_server), m_counter(0) {
+GroupCommit::GroupCommit(RangeServer *range_server) : m_range_server(range_server) {
 
   m_commit_interval = get_i32("Hypertable.RangeServer.CommitInterval");
 
