@@ -67,6 +67,9 @@ namespace Hypertable {
   /// that is used to allocate the maintenance data objects.
   class Ranges : public ReferenceCount {
   public:
+    /// Template function for removing ranges that satisfy a predicate.
+    /// @tparam Func Predicate function
+    /// @param pred Predicate function
     template<typename Func>
     void remove_if(Func pred) {
       std::vector<RangeData> stripped;
@@ -74,7 +77,9 @@ namespace Hypertable {
       remove_copy_if(array.begin(), array.end(), back_inserter(stripped), pred);
       array.swap(stripped);
     }
+    /// Vector of RangeData objects
     std::vector<RangeData> array;
+    /// Memory arena
     ByteArena arena;
   };
 
@@ -84,10 +89,16 @@ namespace Hypertable {
   /// Holds pointer to range and cached start and end rows.
   class RangeInfo {
   public:
+    /// Constructor.
+    /// @param start_row Start row of range
+    /// @param end_row End row of range
     RangeInfo(const String &start_row, const String &end_row)
        : start_row(start_row), end_row(end_row) { }
+    /// Cached start row of range
     String start_row;
+    /// Cached end row of range
     String end_row;
+    /// Smart pointer to Range object
     RangePtr range;
   };
 

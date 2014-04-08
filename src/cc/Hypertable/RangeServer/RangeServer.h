@@ -67,6 +67,7 @@
 #include <boost/thread/condition.hpp>
 
 #include <map>
+#include <memory>
 
 namespace Hypertable {
 
@@ -81,7 +82,7 @@ namespace Hypertable {
   /// The @ref RangeServer module contains the definition of the RangeServer
   /// @{
 
-  class RangeServer : public ReferenceCount {
+  class RangeServer {
   public:
     RangeServer(PropertiesPtr &, ConnectionManagerPtr &,
                 ApplicationQueuePtr &, Hyperspace::SessionPtr &);
@@ -249,8 +250,12 @@ namespace Hypertable {
     UpdatePipelinePtr m_update_pipeline;
     Mutex                  m_stats_mutex;
     PropertiesPtr          m_props;
-    bool                   m_verbose;
-    bool                   m_shutdown;
+
+    /// Flag indicating if verbose logging is enabled
+    bool m_verbose {};
+
+    /// Flag indicating if server is shutting down
+    bool m_shutdown {};
     typedef map<String, PhantomRangeMapPtr> FailoverPhantomRangeMap;
     FailoverPhantomRangeMap m_failover_map;
     Mutex                  m_failover_mutex;
@@ -271,35 +276,40 @@ namespace Hypertable {
     int64_t                m_server_stats_timestamp;
 
     /// Indicates if a get_statistics() call is outstanding
-    bool m_get_statistics_outstanding;
+    bool m_get_statistics_outstanding {};
 
-    NameIdMapperPtr        m_namemap;
+    /// %Table name-to-ID mapper
+    NameIdMapperPtr m_namemap;
 
+    /// Smart pointer to maintenance scheduler
     MaintenanceSchedulerPtr m_maintenance_scheduler;
-    TimerHandlerPtr        m_timer_handler;
+
+    /// Smart pointer to timer handler
+    TimerHandlerPtr m_timer_handler;
+
     GroupCommitInterfacePtr m_group_commit;
     GroupCommitTimerHandlerPtr m_group_commit_timer_handler;
     QueryCachePtr m_query_cache;
-    int64_t                m_scanner_buffer_size;
-    time_t                 m_last_metrics_update;
-    time_t                 m_next_metrics_update;
-    double                 m_loadavg_accum;
-    uint64_t               m_page_in_accum;
-    uint64_t               m_page_out_accum;
-    LoadFactors            m_load_factors;
-    size_t                 m_metric_samples;
-    size_t                 m_cores;
-    Mutex                  m_pending_metrics_mutex;
-    CellsBuilder          *m_pending_metrics_updates;
-    boost::xtime           m_last_control_file_check;
-    int32_t                m_control_file_check_interval;
-    std::ofstream          m_profile_query_out;
-    bool                   m_profile_query;
-    Mutex                  m_profile_mutex;
+    int64_t m_scanner_buffer_size {};
+    time_t m_last_metrics_update {};
+    time_t m_next_metrics_update {};
+    double m_loadavg_accum {};
+    uint64_t m_page_in_accum {};
+    uint64_t m_page_out_accum {};
+    LoadFactors m_load_factors;
+    size_t m_metric_samples {};
+    size_t m_cores {};
+    Mutex m_pending_metrics_mutex;
+    CellsBuilder *m_pending_metrics_updates {};
+    boost::xtime m_last_control_file_check;
+    int32_t m_control_file_check_interval {};
+    std::ofstream m_profile_query_out;
+    bool m_profile_query {};
+    Mutex m_profile_mutex;
   };
 
   /// Smart pointer to RangeServer
-  typedef intrusive_ptr<RangeServer> RangeServerPtr;
+  typedef std::shared_ptr<RangeServer> RangeServerPtr;
 
   /// @}
 

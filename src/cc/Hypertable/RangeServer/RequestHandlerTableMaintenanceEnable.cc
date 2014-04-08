@@ -19,6 +19,12 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Definitions for RequestHandlerTableMaintenanceEnable.
+/// This file contains type definitions for
+/// RequestHandlerTableMaintenanceEnable, an ApplicationHandler class for
+/// carrying out a RangeServer::table_maintenance_enable() request.
+
 #include <Common/Compat.h>
 #include "RequestHandlerTableMaintenanceEnable.h"
 

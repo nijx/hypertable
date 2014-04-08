@@ -19,6 +19,12 @@
  * 02110-1301, USA.
  */
 
+/// @file
+/// Declarations for RequestHandlerTableMaintenanceEnable.
+/// This file contains type declarations for
+/// RequestHandlerTableMaintenanceEnable, an ApplicationHandler class for
+/// carrying out a RangeServer::table_maintenance_enable() request.
+
 #ifndef Hypertable_RangeServer_RequestHandler_TableMaintenanceEnable_h
 #define Hypertable_RangeServer_RequestHandler_TableMaintenanceEnable_h
 
@@ -30,19 +36,38 @@ namespace Hypertable {
 
   class RangeServer;
 
+  /// @addtogroup RangeServer
+  /// @{
+
+  /// ApplicationHandler class for carrying out a
+  /// RangeServer::table_maintenance_enable() request.
   class RequestHandlerTableMaintenanceEnable : public ApplicationHandler {
   public:
+
+    /// Constructor.
+    /// @param comm Pointer to comm layer
+    /// @param rs Pointer to RangeServer
+    /// @param event Smart pointer to event object initiating request
     RequestHandlerTableMaintenanceEnable(Comm *comm, RangeServer *rs,
                                          EventPtr &event_ptr)
       : ApplicationHandler(event_ptr), m_comm(comm), m_range_server(rs) { }
 
+    /// Carries out RangeServer::table_maintenance_enable() request.
+    /// This member function unmarshals the request parameters from #m_event and
+    /// then calls the RangeServer::table_maintenance_enable() member function
+    /// of #m_range_server.
     virtual void run();
 
   private:
-    Comm        *m_comm;
+
+    /// Pointer to comm layer
+    Comm *m_comm;
+
+    /// Pointer to RangeServer
     RangeServer *m_range_server;
   };
 
+  /// @}
 }
 
 #endif // Hypertable_RangeServer_RequestHandler_TableMaintenanceEnable_h

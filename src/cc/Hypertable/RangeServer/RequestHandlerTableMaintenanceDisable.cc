@@ -1,4 +1,4 @@
-/* -*- c++ -*-
+/*
  * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -18,6 +18,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
  */
+
+/// @file
+/// Definitions for RequestHandlerTableMaintenanceDisable.
+/// This file contains type definitions for
+/// RequestHandlerTableMaintenanceDisable, an ApplicationHandler class for
+/// carrying out a RangeServer::table_maintenance_disable() request.
 
 #include <Common/Compat.h>
 #include "RequestHandlerTableMaintenanceDisable.h"

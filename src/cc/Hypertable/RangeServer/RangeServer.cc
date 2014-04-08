@@ -99,15 +99,8 @@ using namespace Hypertable::Property;
 
 RangeServer::RangeServer(PropertiesPtr &props, ConnectionManagerPtr &conn_mgr,
     ApplicationQueuePtr &app_queue, Hyperspace::SessionPtr &hyperspace)
-  : m_props(props), m_verbose(false),
-    m_shutdown(false), m_conn_manager(conn_mgr),
-    m_app_queue(app_queue), m_hyperspace(hyperspace), 
-    m_get_statistics_outstanding(false), m_timer_handler(0),
-    m_last_metrics_update(0),
-    m_loadavg_accum(0.0), m_page_in_accum(0), m_page_out_accum(0),
-    m_metric_samples(0),
-    m_pending_metrics_updates(0), m_profile_query(false)
-{
+  : m_props(props), m_conn_manager(conn_mgr),
+    m_app_queue(app_queue), m_hyperspace(hyperspace) {
 
   m_context = std::make_shared<Context>();
   m_context->props = props;
@@ -295,7 +288,7 @@ RangeServer::RangeServer(PropertiesPtr &props, ConnectionManagerPtr &conn_mgr,
    * Listen for incoming connections
    */
   ConnectionHandlerFactoryPtr chfp =
-      new HandlerFactory(m_context->comm, m_app_queue, this);
+    new HandlerFactory(m_context->comm, m_app_queue, RangeServerPtr(this));
 
   InetAddr listen_addr(INADDR_ANY, port);
   try {
@@ -318,7 +311,8 @@ RangeServer::RangeServer(PropertiesPtr &props, ConnectionManagerPtr &conn_mgr,
   // Create Master client
   int timeout = props->get_i32("Hypertable.Request.Timeout");
   ApplicationQueueInterfacePtr aq = m_app_queue;
-  m_master_connection_handler = new ConnectionHandler(m_context->comm, m_app_queue, this);
+  m_master_connection_handler
+    = new ConnectionHandler(m_context->comm, m_app_queue, RangeServerPtr(this));
   m_master_client = new MasterClient(m_conn_manager, m_hyperspace,
                                      Global::toplevel_dir, timeout, aq,
                                      m_master_connection_handler,
@@ -2334,7 +2328,7 @@ RangeServer::table_maintenance_disable(ResponseCallback *cb,
   for (RangeData &rd : ranges.array)
     rd.range->wait_for_steady_state();
 
-  /// Clear any cached index tables
+  // Clear any cached index tables
   IndexUpdaterFactory::clear_cache();
 
   cb->response_ok();
