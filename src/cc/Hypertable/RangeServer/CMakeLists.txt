@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2013 Hypertable, Inc.
+# Copyright (C) 2007-2014 Hypertable, Inc.
 #
 # This file is part of Hypertable.
 #
@@ -61,6 +61,7 @@ Global.cc
 GroupCommit.cc
 GroupCommitTimerHandler.cc
 HyperspaceSessionHandler.cc
+HyperspaceTableCache.cc
 IndexUpdater.cc
 KeyCompressorNone.cc
 KeyCompressorPrefix.cc
@@ -139,7 +140,6 @@ ScannerMap.cc
 ServerState.cc
 TableInfo.cc
 TableInfoMap.cc
-TableSchemaCache.cc
 TimerHandler.cc
 UpdatePipeline.cc
 )

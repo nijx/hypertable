@@ -47,27 +47,52 @@ namespace Hypertable {
   class LocationInitializer : public ConnectionInitializer {
 
   public:
+
     /// Constructor.
     /// @param context %Range server context
     LocationInitializer(std::shared_ptr<Context> &context);
-    virtual bool is_removed(const String &path, Hyperspace::SessionPtr &hyperspace);
+
+    /// Checks if "removed" attribute is set on Hyperspace location file
+    virtual bool is_removed(const String &path,
+                            Hyperspace::SessionPtr &hyperspace);
+
     virtual CommBuf *create_initialization_request();
     virtual bool process_initialization_response(Event *event);
     virtual uint64_t initialization_command() { return RangeServerProtocol::COMMAND_INITIALIZE; }
+
+    /// Gets assigned location (proxy name) 
     String get();
+
+    /// Waits for completion of initialization handshake
     void wait_for_handshake();
+
+    /// Signals that Hyperspace lock on location file is held
     void set_lock_held() { m_lock_held=true; }
 
   private:
+
     /// %Range server context
     std::shared_ptr<Context> m_context;
+
     /// %Mutex for serializing concurrent access.
     Mutex m_mutex;
+
+    /// Condition variable signalling completion of initialization handshake
     boost::condition m_cond;
+
+    /// Assigned location (proxy name)
     String m_location;
+
+    /// Local pathname to location file
     String m_location_file;
+
+    /// Flag indicating if assigned location has been written to location file
     bool m_location_persisted {};
+
+    /// Flag indicating completion of initialization handshake
     bool m_handshake_complete {};
+
+    /// Flag indicating that Hyperspace lock on location file is held
     bool m_lock_held {};
   };
 

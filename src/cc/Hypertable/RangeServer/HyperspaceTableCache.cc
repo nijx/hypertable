@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -20,21 +20,21 @@
  */
 
 /** @file
- * Definitions for TableSchemaCache.
- * This file contains method definitions for TableSchemaCache, a class used to
+ * Definitions for HyperspaceTableCache.
+ * This file contains method definitions for HyperspaceTableCache, a class used to
  * load table schemas from Hyperspace into memory and provide fast lookup.
  */
 
 #include "Common/Compat.h"
 
 #include "Global.h"
-#include "TableSchemaCache.h"
+#include "HyperspaceTableCache.h"
 
 #include <vector>
 
 using namespace Hypertable;
 
-TableSchemaCache::TableSchemaCache(Hyperspace::SessionPtr &hyperspace,
+HyperspaceTableCache::HyperspaceTableCache(Hyperspace::SessionPtr &hyperspace,
                                    const String &toplevel_dir) {
 
   try {
@@ -50,7 +50,7 @@ TableSchemaCache::TableSchemaCache(Hyperspace::SessionPtr &hyperspace,
   }  
 }
 
-bool TableSchemaCache::get(const String &table_id, Entry &entry) {
+bool HyperspaceTableCache::get(const String &table_id, Entry &entry) {
   auto iter =  m_map.find(table_id);
   if (iter == m_map.end())
     return false;
@@ -59,7 +59,7 @@ bool TableSchemaCache::get(const String &table_id, Entry &entry) {
 }
 
 
-void TableSchemaCache::map_table_schemas(const String &parent,
+void HyperspaceTableCache::map_table_schemas(const String &parent,
                                          const std::vector<Hyperspace::DirEntryAttr> &listing) {
   String prefix = !parent.empty() ? parent + "/" : ""; // avoid leading slash
   for (auto &e : listing) {
@@ -67,14 +67,14 @@ void TableSchemaCache::map_table_schemas(const String &parent,
     if (e.has_attr) {
       Entry entry;
       entry.schema = Schema::new_instance((char*)e.attr.base, e.attr.size);
-      m_map.insert(TableSchemaMap::value_type(name, entry));
+      m_map.insert(TableEntryMap::value_type(name, entry));
     }
     map_table_schemas(name, e.sub_entries);
   }
 }
 
 void
-TableSchemaCache::map_maintenance_disabled(const String &parent,
+HyperspaceTableCache::map_maintenance_disabled(const String &parent,
                        const std::vector<Hyperspace::DirEntryAttr> &listing) {
   String prefix = !parent.empty() ? parent + "/" : ""; // avoid leading slash
   for (auto &e : listing) {

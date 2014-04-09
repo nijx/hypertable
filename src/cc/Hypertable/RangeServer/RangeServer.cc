@@ -30,6 +30,7 @@
 #include <Hypertable/RangeServer/Global.h>
 #include <Hypertable/RangeServer/GroupCommit.h>
 #include <Hypertable/RangeServer/HandlerFactory.h>
+#include <Hypertable/RangeServer/HyperspaceTableCache.h>
 #include <Hypertable/RangeServer/IndexUpdater.h>
 #include <Hypertable/RangeServer/LocationInitializer.h>
 #include <Hypertable/RangeServer/MaintenanceQueue.h>
@@ -45,7 +46,6 @@
 #include <Hypertable/RangeServer/MetaLogEntityTask.h>
 #include <Hypertable/RangeServer/ReplayBuffer.h>
 #include <Hypertable/RangeServer/ScanContext.h>
-#include <Hypertable/RangeServer/TableSchemaCache.h>
 
 #include <Hypertable/Lib/ClusterId.h>
 #include <Hypertable/Lib/CommitLog.h>
@@ -582,7 +582,7 @@ void RangeServer::local_recover() {
   std::vector<MetaLog::EntityPtr> entities, stripped_entities;
   MetaLogEntityRange *range_entity;
   StringSet transfer_logs;
-  TableInfoMap replay_map(new TableSchemaCache(m_hyperspace, Global::toplevel_dir));
+  TableInfoMap replay_map(new HyperspaceTableCache(m_hyperspace, Global::toplevel_dir));
   int priority = 0;
   String rsml_dir = Global::log_dir + "/" + rsml_definition->name();
 

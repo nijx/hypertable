@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Hypertable, Inc.
+ * Copyright (C) 2007-2014 Hypertable, Inc.
  *
  * This file is part of Hypertable.
  *
@@ -62,7 +62,7 @@ void TableInfoMap::get(const String &table_id, TableInfoPtr &info) {
     return;
   }
 
-  TableSchemaCache::Entry entry;
+  HyperspaceTableCache::Entry entry;
 
   if (m_schema_cache) {
     if (!m_schema_cache->get(table_id, entry))

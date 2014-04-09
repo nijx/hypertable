@@ -29,26 +29,31 @@
 
 namespace Hypertable {
 
-    class UpdateContext {
-    public:
-      UpdateContext(std::vector<UpdateRecTable *> &updates, boost::xtime xt) :
-        updates(updates), expire_time(xt) { }
-      ~UpdateContext() {
-        for (auto u : updates)
-          delete u;
-      }
-      std::vector<UpdateRecTable *> updates;
-      boost::xtime expire_time;
-      int64_t auto_revision;
-      SendBackRec send_back;
-      DynamicBuffer root_buf;
-      int64_t last_revision;
-      uint32_t total_updates {};
-      uint32_t total_added {};
-      uint32_t total_syncs {};
-      uint64_t total_bytes_added {};
-    };
+  /// @addtogroup RangeServer
+  /// @{
 
+  /// Context record for update request passed into UpdatePipeline.
+  class UpdateContext {
+  public:
+    UpdateContext(std::vector<UpdateRecTable *> &updates, boost::xtime xt) :
+      updates(updates), expire_time(xt) { }
+    ~UpdateContext() {
+      for (auto u : updates)
+        delete u;
+    }
+    std::vector<UpdateRecTable *> updates;
+    boost::xtime expire_time;
+    int64_t auto_revision;
+    SendBackRec send_back;
+    DynamicBuffer root_buf;
+    int64_t last_revision;
+    uint32_t total_updates {};
+    uint32_t total_added {};
+    uint32_t total_syncs {};
+    uint64_t total_bytes_added {};
+  };
+
+  /// @}
 
 } // namespace Hypertable
 

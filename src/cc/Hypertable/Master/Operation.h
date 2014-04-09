@@ -515,7 +515,7 @@ namespace Hypertable {
     int32_t get_original_type() { return m_original_type; }
     void set_original_type(int32_t original_type) { m_original_type = original_type; }
 
-    /** Sets the #m_ephemeral flag to <i>true</i>. */
+    /// Sets the #m_ephemeral flag to <i>true</i>.
     void set_ephemeral() {
       ScopedLock lock(m_mutex);
       m_ephemeral = true;
@@ -580,9 +580,17 @@ namespace Hypertable {
 
     /// Hash code uniqely identifying operation
     int64_t m_hash_code;
+
+    /// Set of exclusivities
     DependencySet m_exclusivities;
+
+    /// Set of dependencies
     DependencySet m_dependencies;
+
+    /// Set of obstructions
     DependencySet m_obstructions;
+
+    /// Vector of sub operations to be added to OperationProcessor
     std::vector<Operation *> m_sub_ops;
   };
 
