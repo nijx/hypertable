@@ -52,8 +52,7 @@ struct AppPolicy : Config::Policy {
   }
 
   static void init() {
-    alias("reactors", "DfsBroker.Ceph.Reactors");
-    alias("workers", "DfsBroker.Ceph.Workers");
+    alias("workers", "CephBroker.Workers");
     alias("ceph_mon", "CephBroker.MonAddr");
     alias("port", "CephBroker.Port");
 
@@ -70,7 +69,7 @@ int main (int argc, char **argv) {
   //  HT_INFOF("ceph/main attempting to create pieces %d", argc);
   try {
     init_with_policies<Policies>(argc, argv);
-    int port = get_i16("DfsBroker.Port");
+    int port = get_i16("FsBroker.Port");
     int worker_count = get_i32("CephBroker.Workers");
 
     if (has("CephBroker.Port"))

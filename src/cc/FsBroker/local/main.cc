@@ -58,10 +58,10 @@ namespace {
         ("root", str()->default_value("fs/local"), "root directory for local "
          "broker (if relative, it's relative to the installation directory")
         ;
-      alias("port", "DfsBroker.Local.Port");
-      alias("root", "DfsBroker.Local.Root");
-      alias("workers", "DfsBroker.Local.Workers");
-      alias("reactors", "DfsBroker.Local.Reactors");
+      alias("port", "FsBroker.Local.Port");
+      alias("root", "FsBroker.Local.Root");
+      alias("workers", "FsBroker.Local.Workers");
+      alias("reactors", "FsBroker.Local.Reactors");
     }
   };
 
@@ -73,7 +73,7 @@ namespace {
 int main(int argc, char **argv) {
   try {
     init_with_policies<Policies>(argc, argv);
-    int port = get_i16("DfsBroker.Port");
+    int port = get_i16("FsBroker.Port");
     int worker_count = get_i32("workers");
 
     if (has("port"))

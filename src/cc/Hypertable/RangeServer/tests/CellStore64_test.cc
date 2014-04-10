@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
     ReactorFactory::initialize(2);
 
     InetAddr::initialize(&addr, "localhost",
-                         Config::properties->get_i16("DfsBroker.Port"));
+                         Config::properties->get_i16("FsBroker.Port"));
 
     conn_mgr = new ConnectionManager();
     Global::dfs = new FsBroker::Client(conn_mgr, addr, 15000);

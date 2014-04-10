@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -47,10 +47,10 @@ Client::Client(ConnectionManagerPtr &conn_mgr, const sockaddr_in &addr,
 Client::Client(ConnectionManagerPtr &conn_mgr, PropertiesPtr &cfg)
     : m_conn_mgr(conn_mgr) {
   m_comm = conn_mgr->get_comm();
-  uint16_t port = cfg->get_i16("DfsBroker.Port");
-  String host = cfg->get_str("DfsBroker.Host");
-  if (cfg->has("DfsBroker.Timeout"))
-    m_timeout_ms = cfg->get_i32("DfsBroker.Timeout");
+  uint16_t port = cfg->get_i16("FsBroker.Port");
+  String host = cfg->get_str("FsBroker.Host");
+  if (cfg->has("FsBroker.Timeout"))
+    m_timeout_ms = cfg->get_i32("FsBroker.Timeout");
   else
     m_timeout_ms = cfg->get_i32("Hypertable.Request.Timeout");
 

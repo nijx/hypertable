@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
     System::initialize(System::locate_install_dir(argv[0]));
     ReactorFactory::initialize(2);
 
-    uint16_t port = Config::properties->get_i16("DfsBroker.Port");
+    uint16_t port = Config::properties->get_i16("FsBroker.Port");
 
     InetAddr::initialize(&addr, "localhost", port);
 

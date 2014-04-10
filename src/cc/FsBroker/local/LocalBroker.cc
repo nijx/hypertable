@@ -58,8 +58,8 @@ atomic_t LocalBroker::ms_next_fd = ATOMIC_INIT(0);
 
 LocalBroker::LocalBroker(PropertiesPtr &cfg) {
   m_verbose = cfg->get_bool("verbose");
-  m_directio = cfg->get_bool("DfsBroker.Local.DirectIO");
-  m_no_removal = cfg->get_bool("DfsBroker.DisableFileRemoval");
+  m_directio = cfg->get_bool("FsBroker.Local.DirectIO");
+  m_no_removal = cfg->get_bool("FsBroker.DisableFileRemoval");
 
 #if defined(__linux__)
   // disable direct i/o for kernels < 2.6

@@ -108,8 +108,8 @@ int main(int argc, char **argv) {
   try {
     init_with_policies<Policies>(argc, argv);
     InetAddr addr;
-    String host = get_str("DfsBroker.Host");
-    ::uint16_t port = get_i16("DfsBroker.Port");
+    String host = get_str("FsBroker.Host");
+    ::uint16_t port = get_i16("FsBroker.Port");
     ::uint32_t timeout_ms;
     bool nowait = has("nowait");
 

@@ -509,7 +509,7 @@ int main(int argc, char **argv) {
 
     ReactorFactory::initialize(2);
 
-    uint16_t port = Config::properties->get_i16("DfsBroker.Port");
+    uint16_t port = Config::properties->get_i16("FsBroker.Port");
 
     InetAddr::initialize(&addr, "localhost", port);
 

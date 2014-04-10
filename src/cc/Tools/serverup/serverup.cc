@@ -120,7 +120,7 @@ namespace {
         << ':' << get_i16("dfs-port") << HT_END;
 
     if (properties->has("host")) {
-      properties->set("DfsBroker.Host", properties->get_str("host"));
+      properties->set("FsBroker.Host", properties->get_str("host"));
       properties->set("dfs-host", properties->get_str("host"));
     }
 
@@ -332,7 +332,7 @@ int main(int argc, char **argv) {
     ConnectionManagerPtr conn_mgr = new ConnectionManager();
     conn_mgr->set_quiet_mode(silent);
 
-    properties->set("DfsBroker.Timeout", (int32_t)wait_ms);
+    properties->set("FsBroker.Timeout", (int32_t)wait_ms);
 
     if (server_name == "fsbroker") {
       CHECK_SERVER(fsbroker);

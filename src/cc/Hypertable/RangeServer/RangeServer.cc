@@ -251,8 +251,8 @@ RangeServer::RangeServer(PropertiesPtr &props, ConnectionManagerPtr &conn_mgr,
   FsBroker::Client *dfsclient = new FsBroker::Client(conn_mgr, props);
 
   int dfs_timeout;
-  if (props->has("DfsBroker.Timeout"))
-    dfs_timeout = props->get_i32("DfsBroker.Timeout");
+  if (props->has("FsBroker.Timeout"))
+    dfs_timeout = props->get_i32("FsBroker.Timeout");
   else
     dfs_timeout = props->get_i32("Hypertable.Request.Timeout");
 
@@ -266,9 +266,9 @@ RangeServer::RangeServer(PropertiesPtr &props, ConnectionManagerPtr &conn_mgr,
   /**
    * Check for and connect to commit log FS broker
    */
-  if (cfg.has("CommitLog.DfsBroker.Host")) {
-    String loghost = cfg.get_str("CommitLog.DfsBroker.Host");
-    uint16_t logport = cfg.get_i16("CommitLog.DfsBroker.Port");
+  if (cfg.has("CommitLog.FsBroker.Host")) {
+    String loghost = cfg.get_str("CommitLog.FsBroker.Host");
+    uint16_t logport = cfg.get_i16("CommitLog.FsBroker.Port");
     InetAddr addr(loghost, logport);
 
     dfsclient = new FsBroker::Client(conn_mgr, addr, dfs_timeout);

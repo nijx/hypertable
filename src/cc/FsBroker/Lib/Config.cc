@@ -27,24 +27,24 @@ namespace Hypertable { namespace Config {
 
 void init_fs_client_options() {
   cmdline_desc().add_options()
-    ("dfs", str(),
+    ("fs", str(),
         "FS client endpoint in <host:port> format")
-    ("dfs-timeout", i32(),
+    ("fs-timeout", i32(),
         "Timeout in milliseconds for FS client connections")
     ;
-  alias("dfs-timeout", "DfsBroker.Timeout");
+  alias("fs-timeout", "FsBroker.Timeout");
   // hidden aliases
-  alias("dfs-host", "DfsBroker.Host");
-  alias("dfs-port", "DfsBroker.Port");
+  alias("fs-host", "FsBroker.Host");
+  alias("fs-port", "FsBroker.Port");
 }
 
 void init_fs_client() {
   // prepare hidden aliases to be synced
-  if (properties->has("dfs")) {
-    Endpoint e = InetAddr::parse_endpoint(get_str("dfs"));
-    bool defaulted = properties->defaulted("dfs");
-    properties->set("dfs-host", e.host, defaulted);
-    properties->set("dfs-port", e.port, !e.port || defaulted);
+  if (properties->has("fs")) {
+    Endpoint e = InetAddr::parse_endpoint(get_str("fs"));
+    bool defaulted = properties->defaulted("fs");
+    properties->set("fs-host", e.host, defaulted);
+    properties->set("fs-port", e.port, !e.port || defaulted);
   }
 }
 
