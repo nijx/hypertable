@@ -58,7 +58,7 @@ extern "C" {
 #include "TableSplit.h"
 #include "Types.h"
 
-#include "DfsBroker/Lib/FileDevice.h"
+#include "FsBroker/Lib/FileDevice.h"
 
 using namespace std;
 using namespace Hypertable;
@@ -311,7 +311,7 @@ cmd_describe_table(NamespacePtr &ns, ParserState &state,
 
 void
 cmd_select(NamespacePtr &ns, ConnectionManagerPtr &conn_manager,
-           DfsBroker::ClientPtr &dfs_client, ParserState &state, HqlInterpreter::Callback &cb) {
+           FsBroker::ClientPtr &fs_client, ParserState &state, HqlInterpreter::Callback &cb) {
   if (!ns)
     HT_THROW(Error::BAD_NAMESPACE, "Null namespace");
   TablePtr table;
@@ -334,10 +334,10 @@ cmd_select(NamespacePtr &ns, ConnectionManagerPtr &conn_manager,
       fout.push(boost::iostreams::gzip_compressor());
 
     if (boost::algorithm::starts_with(state.scan.outfile, dfs)) {
-      // init Dfs client if not done yet
-      if (!dfs_client)
-        dfs_client = new DfsBroker::Client(conn_manager, Config::properties);
-      fout.push(DfsBroker::FileSink(dfs_client, state.scan.outfile.substr(dfs.size())));
+      // init Fs client if not done yet
+      if (!fs_client)
+        fs_client = new FsBroker::Client(conn_manager, Config::properties);
+      fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(dfs.size())));
     }
     else if (boost::algorithm::starts_with(state.scan.outfile, localfs))
       fout.push(boost::iostreams::file_descriptor_sink(state.scan.outfile.substr(localfs.size())));
@@ -471,7 +471,7 @@ cmd_select(NamespacePtr &ns, ConnectionManagerPtr &conn_manager,
 
 void
 cmd_dump_table(NamespacePtr &ns,
-               ConnectionManagerPtr &conn_manager, DfsBroker::ClientPtr &dfs_client,
+               ConnectionManagerPtr &conn_manager, FsBroker::ClientPtr &fs_client,
                ParserState &state, HqlInterpreter::Callback &cb) {
   if (!ns)
     HT_THROW(Error::BAD_NAMESPACE, "Null namespace");
@@ -494,10 +494,10 @@ cmd_dump_table(NamespacePtr &ns,
     if (boost::algorithm::ends_with(state.scan.outfile, ".gz"))
       fout.push(boost::iostreams::gzip_compressor());
     if (boost::algorithm::starts_with(state.scan.outfile, dfs)) {
-      // init Dfs client if not done yet
-      if (!dfs_client)
-        dfs_client = new DfsBroker::Client(conn_manager, Config::properties);
-      fout.push(DfsBroker::FileSink(dfs_client, state.scan.outfile.substr(dfs.size())));
+      // init Fs client if not done yet
+      if (!fs_client)
+        fs_client = new FsBroker::Client(conn_manager, Config::properties);
+      fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(dfs.size())));
     }
     else if (boost::algorithm::starts_with(state.scan.outfile, localfs))
       fout.push(boost::iostreams::file_descriptor_sink(state.scan.outfile.substr(localfs.size())));
@@ -588,7 +588,7 @@ cmd_dump_table(NamespacePtr &ns,
 void
 cmd_load_data(NamespacePtr &ns, ::uint32_t mutator_flags,
               ConnectionManagerPtr &conn_manager, 
-              DfsBroker::ClientPtr &dfs_client,
+              FsBroker::ClientPtr &fs_client,
               ParserState &state, HqlInterpreter::Callback &cb) {
   if (!ns)
     HT_THROW(Error::BAD_NAMESPACE, "Null namespace");
@@ -635,11 +635,11 @@ cmd_load_data(NamespacePtr &ns, ::uint32_t mutator_flags,
   LoadDataSourcePtr lds;
   bool is_delete;
 
-  // init Dfs client if not done yet
-  if(state.input_file_src == DFS_FILE && !dfs_client)
-    dfs_client = new DfsBroker::Client(conn_manager, Config::properties);
+  // init Fs client if not done yet
+  if(state.input_file_src == DFS_FILE && !fs_client)
+    fs_client = new FsBroker::Client(conn_manager, Config::properties);
 
-  lds = LoadDataSourceFactory::create(dfs_client, state.input_file,
+  lds = LoadDataSourceFactory::create(fs_client, state.input_file,
                state.input_file_src, state.header_file, state.header_file_src,
                state.columns, state.timestamp_column, fs,
                state.row_uniquify_chars, state.load_flags);
@@ -970,7 +970,7 @@ void cmd_close(Client *client, HqlInterpreter::Callback &cb) {
 
 HqlInterpreter::HqlInterpreter(Client *client, ConnectionManagerPtr &conn_manager,
     bool immutable_namespace) : m_client(client), m_mutator_flags(0),
-    m_conn_manager(conn_manager), m_dfs_client(0), m_immutable_namespace(immutable_namespace) {
+    m_conn_manager(conn_manager), m_fs_client(0), m_immutable_namespace(immutable_namespace) {
   if (Config::properties->get_bool("Hypertable.HqlInterpreter.Mutator.NoLogSync"))
     m_mutator_flags = Table::MUTATOR_FLAG_NO_LOG_SYNC;
 
@@ -1007,11 +1007,11 @@ void HqlInterpreter::execute(const String &line, Callback &cb) {
     case COMMAND_DESCRIBE_TABLE:
       cmd_describe_table(m_namespace, state, cb);                  break;
     case COMMAND_SELECT:
-      cmd_select(m_namespace, m_conn_manager, m_dfs_client,
+      cmd_select(m_namespace, m_conn_manager, m_fs_client,
                  state, cb);                                       break;
     case COMMAND_LOAD_DATA:
       cmd_load_data(m_namespace, m_mutator_flags,
-                    m_conn_manager, m_dfs_client, state, cb);      break;
+                    m_conn_manager, m_fs_client, state, cb);      break;
     case COMMAND_INSERT:
       cmd_insert(m_namespace, state, cb);                          break;
     case COMMAND_DELETE:
@@ -1027,7 +1027,7 @@ void HqlInterpreter::execute(const String &line, Callback &cb) {
     case COMMAND_RENAME_TABLE:
       cmd_rename_table(m_namespace, state, cb);                    break;
     case COMMAND_DUMP_TABLE:
-      cmd_dump_table(m_namespace, m_conn_manager, m_dfs_client,
+      cmd_dump_table(m_namespace, m_conn_manager, m_fs_client,
                      state, cb);                                   break;
     case COMMAND_CLOSE:
       cmd_close(m_client, cb);                                     break;

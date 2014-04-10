@@ -22,7 +22,7 @@
 #include "Common/Compat.h"
 #include "Common/Init.h"
 #include "Common/Logger.h"
-#include "DfsBroker/Lib/Client.h"
+#include "FsBroker/Lib/Client.h"
 #include "Hypertable/Lib/Config.h"
 #include "Hypertable/Lib/old/RangeServerMetaLog.h"
 #include "Hypertable/Lib/old/RangeServerMetaLogReader.h"
@@ -51,7 +51,7 @@ struct MyPolicy : Policy {
   }
 };
 
-typedef Meta::list<MyPolicy, DfsClientPolicy, DefaultCommPolicy> Policies;
+typedef Meta::list<MyPolicy, FsClientPolicy, DefaultCommPolicy> Policies;
 
 void dump_range_states(RangeServerMetaLogReader *rdr) {
   bool found_recover_entry;
@@ -99,7 +99,7 @@ int main(int ac, char *av[]) {
   try {
     init_with_policies<Policies>(ac, av);
 
-    DfsBroker::Client *dfs = new DfsBroker::Client(get_str("dfs-host"),
+    FsBroker::Client *dfs = new FsBroker::Client(get_str("dfs-host"),
         get_i16("dfs-port"), get_i32("timeout"));
 
     dump_metalog(*dfs, get_str("path"), properties);

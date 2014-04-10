@@ -1,4 +1,4 @@
-/** -*- c++ -*-
+/* -*- c++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -28,7 +28,7 @@
 #include "Common/System.h"
 #include "Common/Usage.h"
 
-#include "DfsBroker/Lib/Client.h"
+#include "FsBroker/Lib/Client.h"
 
 #include "Hypertable/Lib/Client.h"
 #include "Hypertable/Lib/Key.h"
@@ -104,12 +104,12 @@ int main(int argc, char **argv) {
     ClientPtr hypertable_client = new Hypertable::Client(argv[0]);
     NamespacePtr ns = hypertable_client->open_namespace("/");
     ConnectionManagerPtr conn_mgr = new ConnectionManager();
-    DfsBroker::Client *dfs = new DfsBroker::Client(conn_mgr, properties);
+    FsBroker::Client *dfs = new FsBroker::Client(conn_mgr, properties);
 
     Global::dfs = dfs;
 
     if (!dfs->wait_for_connection(timeout)) {
-      cerr << "error: timed out waiting for DFS broker" << endl;
+      cerr << "error: timed out waiting for FS broker" << endl;
       exit(1);
     }
 

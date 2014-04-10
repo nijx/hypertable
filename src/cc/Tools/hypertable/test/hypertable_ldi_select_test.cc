@@ -40,7 +40,7 @@ extern "C" {
 #include "AsyncComm/Comm.h"
 #include "AsyncComm/Config.h"
 
-#include "DfsBroker/Lib/Client.h"
+#include "FsBroker/Lib/Client.h"
 
 using namespace Hypertable;
 using namespace Config;
@@ -60,7 +60,7 @@ namespace {
 
   static const size_t amount = 4096;
 
-  bool copyToDfs(DfsBroker::Client *client, const char *src, const char *dst) {
+  bool copyToDfs(FsBroker::Client *client, const char *src, const char *dst) {
     client->mkdirs("/ldi_test");
 
     std::filebuf src_file;
@@ -80,7 +80,7 @@ namespace {
     return true;
   }
 
-  bool copyFromDfs(DfsBroker::Client *client, const char *src, const char *dst) {
+  bool copyFromDfs(FsBroker::Client *client, const char *src, const char *dst) {
     client->mkdirs("/ldi_test");
 
     int fd=client->open(src,0);
@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
   }
 
 
-  DfsBroker::Client *client = new DfsBroker::Client(comm, addr, timeout_ms);
+  FsBroker::Client *client = new FsBroker::Client(comm, addr, timeout_ms);
 
   /**
    * LDI and Select using stdin
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
     _exit(1);
 
   /**
-   * LDI and Select using DfsBroker
+   * LDI and Select using FsBroker
    */
 
 

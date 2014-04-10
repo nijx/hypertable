@@ -35,7 +35,7 @@
 #include "Hypertable/Lib/CommitLog.h"
 #include "Hypertable/Lib/CommitLogReader.h"
 
-#include "DfsBroker/Lib/Client.h"
+#include "FsBroker/Lib/Client.h"
 
 using namespace Hypertable;
 using namespace Config;
@@ -51,13 +51,13 @@ namespace {
     }
   };
 
-  typedef Meta::list<MyPolicy, DfsClientPolicy, DefaultCommPolicy> Policies;
+  typedef Meta::list<MyPolicy, FsClientPolicy, DefaultCommPolicy> Policies;
 
-  void test1(DfsBroker::Client *dfs_client);
-  void test_link(DfsBroker::Client *dfs_client);
+  void test1(FsBroker::Client *dfs_client);
+  void test_link(FsBroker::Client *dfs_client);
   void write_entries(CommitLog *log, int num_entries, uint64_t *sump,
                      CommitLogBase *link_log);
-  void read_entries(DfsBroker::Client *dfs_client, CommitLogReader *log_reader,
+  void read_entries(FsBroker::Client *dfs_client, CommitLogReader *log_reader,
                     uint64_t *sump);
 }
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
      * connect to DFS broker
      */
     InetAddr addr(get_str("dfs-host"), get_i16("dfs-port"));
-    DfsBroker::ClientPtr dfs = new DfsBroker::Client(conn_mgr, addr, timeout);
+    FsBroker::ClientPtr dfs = new FsBroker::Client(conn_mgr, addr, timeout);
 
     if (!dfs->wait_for_connection(10000)) {
       HT_ERROR("Unable to connect to DFS Broker, exiting...");
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 
 namespace {
 
-  void test1(DfsBroker::Client *dfs_client) {
+  void test1(FsBroker::Client *dfs_client) {
     String log_dir = "/hypertable/test_log";
     String fname;
     CommitLog *log;
@@ -132,7 +132,7 @@ namespace {
     HT_ASSERT(sum_read == sum_written);
   }
 
-  void test_link(DfsBroker::Client *dfs_client) {
+  void test_link(FsBroker::Client *dfs_client) {
     String log_dir = "/hypertable/test_log";
     String fname;
     CommitLog *log;
@@ -243,7 +243,7 @@ namespace {
   }
 
   void
-  read_entries(DfsBroker::Client *dfs_client, CommitLogReader *log_reader,
+  read_entries(FsBroker::Client *dfs_client, CommitLogReader *log_reader,
                uint64_t *sump) {
     const uint8_t *block;
     size_t block_len;
