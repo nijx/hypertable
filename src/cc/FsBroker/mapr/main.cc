@@ -72,11 +72,15 @@ typedef Meta::list<AppPolicy, FsBrokerPolicy, DefaultCommPolicy> Policies;
 int main(int argc, char **argv) {
   try {
     init_with_policies<Policies>(argc, argv);
-    int port = get_i16("FsBroker.Port");
+    int port;
     int worker_count = get_i32("workers");
 
     if (has("port"))
       port = get_i16("port");
+    else if (has("DfsBroker.Port"))
+      port = get_i16("DfsBroker.Port");
+    else
+      port = get_i16("FsBroker.Port");
 
     Comm *comm = Comm::instance();
     ApplicationQueuePtr app_queue = new ApplicationQueue(worker_count);

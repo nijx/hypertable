@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -58,8 +58,11 @@ atomic_t LocalBroker::ms_next_fd = ATOMIC_INIT(0);
 
 LocalBroker::LocalBroker(PropertiesPtr &cfg) {
   m_verbose = cfg->get_bool("verbose");
-  m_directio = cfg->get_bool("FsBroker.Local.DirectIO");
   m_no_removal = cfg->get_bool("FsBroker.DisableFileRemoval");
+  if (cfg->has("DfsBroker.Local.DirectIO"))
+    m_directio = cfg->get_bool("DfsBroker.Local.DirectIO");
+  else
+    m_directio = cfg->get_bool("FsBroker.Local.DirectIO");
 
 #if defined(__linux__)
   // disable direct i/o for kernels < 2.6
@@ -73,7 +76,11 @@ LocalBroker::LocalBroker(PropertiesPtr &cfg) {
   /**
    * Determine root directory
    */
-  Path root = cfg->get_str("root", "");
+  Path root;
+  if (cfg->has("DfsBroker.Local.Root"))
+    root = Path(cfg->get_str("DfsBroker.Local.Root"));
+  else
+    root = Path(cfg->get_str("root", ""));
 
   if (!root.is_complete()) {
     Path data_dir = cfg->get_str("Hypertable.DataDirectory");

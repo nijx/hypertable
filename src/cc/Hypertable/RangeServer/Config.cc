@@ -1,4 +1,4 @@
-/** -*- C++ -*-
+/* -*- C++ -*-
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -31,8 +31,8 @@ void init_range_server_options() {
     ("crash-test", str(), "Arguments for crash simulation")
     ;
     alias("port", "Hypertable.RangeServer.Port");
-    alias("log-host", "Hypertable.RangeServer.CommitLog.FsBroker.Host");
-    alias("log-port", "Hypertable.RangeServer.CommitLog.FsBroker.Port");
+    alias("log-host", "Hypertable.RangeServer.CommitLog.DfsBroker.Host");
+    alias("log-port", "Hypertable.RangeServer.CommitLog.DfsBroker.Port");
     alias("reactors", "Hypertable.RangeServer.Reactors");
     alias("workers", "Hypertable.RangeServer.Workers");
 }

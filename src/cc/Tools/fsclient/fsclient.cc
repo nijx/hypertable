@@ -109,9 +109,14 @@ int main(int argc, char **argv) {
     init_with_policies<Policies>(argc, argv);
     InetAddr addr;
     String host = get_str("FsBroker.Host");
-    ::uint16_t port = get_i16("FsBroker.Port");
+    ::uint16_t port;
     ::uint32_t timeout_ms;
     bool nowait = has("nowait");
+
+    if (has("DfsBroker.Port"))
+      port = get_i16("DfsBroker.Port");
+    else
+      port = get_i16("FsBroker.Port");
 
     batch_mode = has("batch");
 

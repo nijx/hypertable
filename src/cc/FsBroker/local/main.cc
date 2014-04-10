@@ -73,11 +73,21 @@ namespace {
 int main(int argc, char **argv) {
   try {
     init_with_policies<Policies>(argc, argv);
-    int port = get_i16("FsBroker.Port");
+    int port;
     int worker_count = get_i32("workers");
 
     if (has("port"))
       port = get_i16("port");
+    else
+      port = get_i16("FsBroker.Port");
+
+    // Backward compatibility
+    if (has("DfsBroker.Local.Port"))
+      port = get_i16("DfsBroker.Local.Port");
+    else if (has("DfsBroker.Port"))
+      port = get_i16("DfsBroker.Port");
+    if (has("DfsBroker.Local.Workers"))
+      worker_count = get_i32("DfsBroker.Local.Workers");
 
     Comm *comm = Comm::instance();
 

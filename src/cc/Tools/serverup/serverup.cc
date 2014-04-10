@@ -116,26 +116,36 @@ namespace {
   }
 
   void check_fsbroker(ConnectionManagerPtr &conn_mgr, uint32_t wait_ms) {
-    HT_DEBUG_OUT << "Checking fsbroker at " << get_str("dfs-host")
-        << ':' << get_i16("dfs-port") << HT_END;
+    HT_DEBUG_OUT << "Checking fsbroker at " << get_str("fs-host")
+        << ':' << get_i16("fs-port") << HT_END;
 
     if (properties->has("host")) {
       properties->set("FsBroker.Host", properties->get_str("host"));
-      properties->set("dfs-host", properties->get_str("host"));
+      properties->set("fs-host", properties->get_str("host"));
+    }
+
+    // Backward compatibility
+    if (properties->has("DfsBroker.Host")) {
+      properties->set("FsBroker.Host", properties->get_str("DfsBroker.Host"));
+      properties->set("fs-host", properties->get_str("DfsBroker.Host"));
+    }
+    if (properties->has("DfsBroker.Port")) {
+      properties->set("FsBroker.Port", properties->get_i16("DfsBroker.Port"));
+      properties->set("fs-port", properties->get_i16("DfsBroker.Port"));
     }
 
     if (get_bool("display-address")) {
-      std::cout << get_str("dfs-host") << ":" << get_i16("dfs-port")
+      std::cout << get_str("fs-host") << ":" << get_i16("fs-port")
           << std::endl;
       _exit(0);
     }
 
-    FsBroker::ClientPtr dfs = new FsBroker::Client(conn_mgr, properties);
+    FsBroker::ClientPtr fs = new FsBroker::Client(conn_mgr, properties);
 
-    if (!dfs->wait_for_connection(wait_ms))
+    if (!fs->wait_for_connection(wait_ms))
       HT_THROW(Error::REQUEST_TIMEOUT, "connecting to fsbroker");
 
-    HT_TRY("getting fsbroker status", dfs->status());
+    HT_TRY("getting fsbroker status", fs->status());
 
   }
 

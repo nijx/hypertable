@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2007-2012 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -136,13 +136,20 @@ public class main {
 
         // Determine listen port
         port = DEFAULT_PORT;
-        if (props.containsKey("FsBroker.Port")) {
-          str  = props.getProperty("FsBroker.Port");
-          port = Integer.parseInt(str);
-        }
         if (props.containsKey("HdfsBroker.Port")) {
           str  = props.getProperty("HdfsBroker.Port");
           port = Integer.parseInt(str);
+        }
+        else {
+          if (props.containsKey("FsBroker.Port")) {
+            str  = props.getProperty("FsBroker.Port");
+            port = Integer.parseInt(str);
+          }
+          // Backward compatibility
+          if (props.containsKey("DfsBroker.Port")) {
+            str  = props.getProperty("DfsBroker.Port");
+            port = Integer.parseInt(str);
+          }
         }
 
         // Determine reactor count

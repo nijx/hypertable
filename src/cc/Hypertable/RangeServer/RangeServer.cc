@@ -266,9 +266,9 @@ RangeServer::RangeServer(PropertiesPtr &props, ConnectionManagerPtr &conn_mgr,
   /**
    * Check for and connect to commit log FS broker
    */
-  if (cfg.has("CommitLog.FsBroker.Host")) {
-    String loghost = cfg.get_str("CommitLog.FsBroker.Host");
-    uint16_t logport = cfg.get_i16("CommitLog.FsBroker.Port");
+  if (cfg.has("CommitLog.DfsBroker.Host")) {
+    String loghost = cfg.get_str("CommitLog.DfsBroker.Host");
+    uint16_t logport = cfg.get_i16("CommitLog.DfsBroker.Port");
     InetAddr addr(loghost, logport);
 
     dfsclient = new FsBroker::Client(conn_mgr, addr, dfs_timeout);

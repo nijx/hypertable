@@ -54,6 +54,12 @@ Client::Client(ConnectionManagerPtr &conn_mgr, PropertiesPtr &cfg)
   else
     m_timeout_ms = cfg->get_i32("Hypertable.Request.Timeout");
 
+  // Backward compatibility
+  if (cfg->has("DfsBroker.Host"))
+    host = cfg->get_str("DfsBroker.Host");
+  if (cfg->has("DfsBroker.Port"))
+    port = cfg->get_i16("DfsBroker.Port");
+
   InetAddr::initialize(&m_addr, host.c_str(), port);
 
   conn_mgr->add(m_addr, m_timeout_ms, "FS Broker");

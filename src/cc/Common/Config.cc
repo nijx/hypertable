@@ -222,8 +222,6 @@ void DefaultPolicy::init_options() {
         "QFS meta server")
     ("Qfs.MetaServer.Port", i16()->default_value(20000), "Port number for QFS "
         "meta server")
-    ("DfsBroker.DisableFileRemoval", boo(),
-        "DEPRECATED: renamed to FsBroker.DisableFileRemoval")
     ("DfsBroker.Local.DirectIO", boo(),
         "DEPRECATED: renamed to FsBroker.Local.DirectIO")
     ("DfsBroker.Local.Port", i16(),
