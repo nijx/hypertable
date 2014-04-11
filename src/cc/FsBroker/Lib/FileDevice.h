@@ -95,7 +95,7 @@ namespace Hypertable { namespace FsBroker {
         // if file is opened for output then create if it doesn't exist
         if (mode & BOOST_IOS::in) {
           if (!m_client->exists(filename))
-            HT_THROW(Error::FILE_NOT_FOUND, (String)"dfs://" + filename);
+            HT_THROW(Error::FILE_NOT_FOUND, (String)"fs://" + filename);
           m_length = m_client->length(filename, accurate_length);
           m_fd = m_client->open_buffered(filename, Filesystem::OPEN_FLAG_DIRECTIO,
                                          READAHEAD_BUFFER_SIZE, OUTSTANDING_READS);

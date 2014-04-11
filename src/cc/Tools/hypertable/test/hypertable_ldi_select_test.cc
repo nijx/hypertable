@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
                 " DROP TABLE IF EXISTS hypertable;" +
                 " CREATE TABLE hypertable ( TestColumnFamily );" +
                 " LOAD DATA INFILE ROW_KEY_COLUMN=rowkey" +
-                " \"dfs:///ldi_test/hypertable_test.tsv.gz\"" +
+                " \"fs:///ldi_test/hypertable_test.tsv.gz\"" +
                 " INTO TABLE hypertable;"
                 ;
   // load from dfs zipped file
@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
   if (system(cmd_str.c_str()) != 0)
     _exit(1);
   // select into dfs zipped file
-  hql = "USE \"/test\"; SELECT * FROM hypertable INTO FILE \"dfs:///ldi_test/dfs_select.gz\";";
+  hql = "USE \"/test\"; SELECT * FROM hypertable INTO FILE \"fs:///ldi_test/dfs_select.gz\";";
   cmd_str = "./hypertable --test-mode --config hypertable.cfg --exec '"+ hql + "'";
   if (system(cmd_str.c_str()) != 0)
     _exit(1);

@@ -319,7 +319,6 @@ cmd_select(NamespacePtr &ns, ConnectionManagerPtr &conn_manager,
   boost::iostreams::filtering_ostream fout;
   FILE *outf = cb.output;
   int out_fd = -1;
-  String dfs = "dfs://";
   String localfs = "file://";
   char fs = state.field_separator ? state.field_separator : '\t';
 
@@ -333,11 +332,15 @@ cmd_select(NamespacePtr &ns, ConnectionManagerPtr &conn_manager,
     if (boost::algorithm::ends_with(state.scan.outfile, ".gz"))
       fout.push(boost::iostreams::gzip_compressor());
 
-    if (boost::algorithm::starts_with(state.scan.outfile, dfs)) {
+    if (boost::algorithm::starts_with(state.scan.outfile, "dfs://") ||
+        boost::algorithm::starts_with(state.scan.outfile, "fs://")) {
       // init Fs client if not done yet
       if (!fs_client)
         fs_client = new FsBroker::Client(conn_manager, Config::properties);
-      fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(dfs.size())));
+      if (boost::algorithm::starts_with(state.scan.outfile, "dfs://"))
+        fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(6)));
+      else
+        fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(5)));
     }
     else if (boost::algorithm::starts_with(state.scan.outfile, localfs))
       fout.push(boost::iostreams::file_descriptor_sink(state.scan.outfile.substr(localfs.size())));
@@ -479,7 +482,6 @@ cmd_dump_table(NamespacePtr &ns,
   boost::iostreams::filtering_ostream fout;
   FILE *outf = cb.output;
   int out_fd = -1;
-  String dfs = "dfs://";
   String localfs = "file://";
   char fs = state.field_separator ? state.field_separator : '\t';
 
@@ -493,11 +495,16 @@ cmd_dump_table(NamespacePtr &ns,
 
     if (boost::algorithm::ends_with(state.scan.outfile, ".gz"))
       fout.push(boost::iostreams::gzip_compressor());
-    if (boost::algorithm::starts_with(state.scan.outfile, dfs)) {
+  
+    if (boost::algorithm::starts_with(state.scan.outfile, "dfs://") ||
+        boost::algorithm::starts_with(state.scan.outfile, "fs://")) {
       // init Fs client if not done yet
       if (!fs_client)
         fs_client = new FsBroker::Client(conn_manager, Config::properties);
-      fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(dfs.size())));
+      if (boost::algorithm::starts_with(state.scan.outfile, "dfs://"))
+        fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(6)));
+      else
+        fout.push(FsBroker::FileSink(fs_client, state.scan.outfile.substr(5)));
     }
     else if (boost::algorithm::starts_with(state.scan.outfile, localfs))
       fout.push(boost::iostreams::file_descriptor_sink(state.scan.outfile.substr(localfs.size())));
